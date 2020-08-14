@@ -1,4 +1,4 @@
-module github.com/identityOrg/cerberus-models
+module github.com/identityOrg/cerberus-core
 
 go 1.14
 

@@ -1,4 +1,4 @@
-package cerberus_models
+package core
 
 import "time"
 
