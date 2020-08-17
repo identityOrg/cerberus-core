@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/base32"
 	"github.com/pquerna/otp/totp"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -49,4 +50,106 @@ func TestRerenderPng(t *testing.T) {
 		t.Error(err)
 	}
 	println(key2.Secret())
+}
+
+func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("de-activate", func(t *testing.T) {
+		err := userStoreService.DeactivateUser(user.ID)
+		assert.NoError(t, err)
+	})
+	t.Run("activate", func(t *testing.T) {
+		err := userStoreService.ActivateUser(user.ID)
+		assert.NoError(t, err)
+	})
+	t.Run("user not exists", func(t *testing.T) {
+		err := userStoreService.ActivateUser(1000)
+		if assert.Error(t, err) {
+			assert.NotNil(t, err)
+		}
+	})
+}
+
+func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	allUser, count, err := userStoreService.FindAllUser(0, 5)
+	assert.Nil(t, err)
+	if assert.Equal(t, uint(1), count) {
+		assert.Equal(t, uint(1), allUser[0].ID)
+	}
+}
+
+func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("valid", func(t *testing.T) {
+		err := userStoreService.ValidatePassword(1, "password")
+		assert.Nil(t, err)
+	})
+	t.Run("invalid", func(t *testing.T) {
+		err := userStoreService.ValidatePassword(1, "password1")
+		assert.Error(t, err)
+	})
+	t.Run("user not exists", func(t *testing.T) {
+		err := userStoreService.ValidatePassword(2000, "password")
+		assert.Error(t, err)
+	})
+}
+
+func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("found", func(t *testing.T) {
+		foundUser, err := userStoreService.FindUserByEmail(user.EmailAddress)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, foundUser.ID)
+	})
+	t.Run("not found", func(t *testing.T) {
+		foundUser, err := userStoreService.FindUserByEmail("invalid@domain.com")
+		assert.Error(t, err)
+		assert.Nil(t, foundUser)
+	})
+}
+
+func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("found", func(t *testing.T) {
+		foundUser, err := userStoreService.FindUserByUsername(user.Username)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, foundUser.ID)
+	})
+	t.Run("not found", func(t *testing.T) {
+		foundUser, err := userStoreService.FindUserByUsername("invalid")
+		assert.Error(t, err)
+		assert.Nil(t, foundUser)
+	})
+}
+
+func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("valid", func(t *testing.T) {
+		code, err := totp.GenerateCode(user.Credentials[1].Value, time.Now())
+		if assert.NoError(t, err) {
+			err = userStoreService.ValidateTOTP(user.ID, code)
+			assert.NoError(t, err)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		err := userStoreService.ValidateTOTP(user.ID, "code")
+		assert.Error(t, err)
+	})
+	t.Run("no user", func(t *testing.T) {
+		err := userStoreService.ValidateTOTP(2000, "code")
+		assert.Error(t, err)
+	})
+}
+
+func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("success", func(t *testing.T) {
+		err := userStoreService.SetPassword(noCredUser.ID, "new password")
+		assert.NoError(t, err)
+	})
+	t.Run("user not found", func(t *testing.T) {
+		err := userStoreService.SetPassword(2000, "new password")
+		assert.Error(t, err)
+	})
 }

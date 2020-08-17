@@ -22,9 +22,9 @@ func (um UserModel) TableName() string {
 }
 
 type UserCredentials struct {
-	BaseModel
+	DeletableBaseModel
 	UserID              uint       `sql:"column:user_id;not null" json:"-"`
-	Type                uint8      `sql:"primary_key;column:cred_type;auto_increment:false" json:"cred_type,omitempty"`
+	Type                uint8      `sql:"column:cred_type;auto_increment:false" json:"cred_type,omitempty"`
 	Value               string     `sql:"column:value;size:2048" json:"value,omitempty"`
 	FirstInvalidAttempt *time.Time `sql:"column:first_invalid_attempt" json:"first_invalid_attempt,omitempty"`
 	InvalidAttemptCount uint       `sql:"column:invalid_attempt_count" json:"invalid_attempt_count,omitempty"`
@@ -106,11 +106,11 @@ type IUserStoreService interface {
 	DeactivateUser(id uint) error
 	SetPassword(id uint, password string) error
 	GenerateTOTP(id uint, issuer string) (img image.Image, secret string, err error)
-	ValidatePassword(id uint, password string) (blocked bool, err error)
-	ValidateTOTP(id uint, code string) (valid bool, err error)
+	ValidatePassword(id uint, password string) (err error)
+	ValidateTOTP(id uint, code string) (err error)
 }
 
 const (
-	CredTypePassword = 0
-	CredTypeTOTP     = 1
+	CredTypePassword = 1
+	CredTypeTOTP     = 2
 )
