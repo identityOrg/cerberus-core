@@ -74,7 +74,7 @@ func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
 	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
 	allUser, count, err := userStoreService.FindAllUser(0, 5)
 	assert.Nil(t, err)
-	if assert.Equal(t, uint(1), count) {
+	if assert.Equal(t, uint(3), count) {
 		assert.Equal(t, uint(1), allUser[0].ID)
 	}
 }
@@ -92,6 +92,12 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 	t.Run("user not exists", func(t *testing.T) {
 		err := userStoreService.ValidatePassword(2000, "password")
 		assert.Error(t, err)
+	})
+	t.Run("cred not found", func(t *testing.T) {
+		err := userStoreService.ValidatePassword(noCredUser2.ID, "password")
+		if assert.Error(t, err) {
+			assert.EqualError(t, err, "credential not found")
+		}
 	})
 }
 
@@ -151,5 +157,24 @@ func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 	t.Run("user not found", func(t *testing.T) {
 		err := userStoreService.SetPassword(2000, "new password")
 		assert.Error(t, err)
+	})
+}
+
+func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	t.Run("success", func(t *testing.T) {
+		image, secret, err := userStoreService.GenerateTOTP(noCredUser.ID, "cerberus")
+		if assert.NoError(t, err) {
+			assert.NotNil(t, image)
+			assert.NotEqual(t, "", secret)
+		}
+	})
+	t.Run("user not found", func(t *testing.T) {
+		image, secret, err := userStoreService.GenerateTOTP(2000, "cerberus")
+		if assert.Error(t, err) {
+			assert.Nil(t, image)
+			assert.EqualError(t, err, "user not found")
+			assert.Equal(t, "", secret)
+		}
 	})
 }

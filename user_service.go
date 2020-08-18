@@ -124,12 +124,15 @@ func (u *UserStoreServiceImpl) SetPassword(id uint, password string) (err error)
 	return u.updateCredential(id, string(hashed), CredTypePassword)
 }
 
-func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (img image.Image, secret string, err error) {
+func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (image.Image, string, error) {
 	user := &UserModel{}
 	user.ID = id
-	err = u.Db.Find(user).Error
-	if err != nil {
-		return nil, "", err
+	result := u.Db.Find(user)
+	if result.RecordNotFound() {
+		return nil, "", errors.New("user not found")
+	}
+	if result.Error != nil {
+		return nil, "", result.Error
 	}
 	opt := totp.GenerateOpts{
 		Issuer:      issuer,
@@ -140,16 +143,15 @@ func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (img image.I
 	if err != nil {
 		return nil, "", err
 	}
-	img, err = key.Image(200, 200)
+	img, err := key.Image(200, 200)
 	if err != nil {
 		return nil, "", err
 	}
-	secret = key.Secret()
-	err = u.updateCredential(id, secret, CredTypeTOTP)
+	err = u.updateCredential(id, key.Secret(), CredTypeTOTP)
 	if err != nil {
 		return nil, "", err
 	}
-	return
+	return img, key.Secret(), nil
 }
 
 func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
@@ -191,11 +193,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType uint8) error {
 	user := &UserModel{}
 	user.ID = id
-	tx := u.Db.Begin()
-	defer func() {
-		tx.RollbackUnlessCommitted()
-	}()
-	findResult := tx.Find(user)
+	findResult := u.Db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -204,7 +202,7 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 		return err
 	}
 	var cred UserCredentials
-	result := tx.Find(&cred, "user_id = ? and cred_type = ?", id, credType)
+	result := u.Db.Find(&cred, "user_id = ? and cred_type = ?", id, credType)
 	if result.Error != nil && result.Error.Error() != "record not found" {
 		return result.Error
 	}
@@ -217,7 +215,8 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 		}
 	} else {
 		cred.Value = hashed
+		cred.Bocked = false
 	}
-	err = tx.Save(&cred).Error
+	err = u.Db.Save(&cred).Error
 	return err
 }

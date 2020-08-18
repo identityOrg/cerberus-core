@@ -10,6 +10,7 @@ import (
 var testDb *gorm.DB
 var user *UserModel
 var noCredUser *UserModel
+var noCredUser2 *UserModel
 var key *otp.Key
 
 func init() {
@@ -20,7 +21,7 @@ func init() {
 	}
 	testDb = testDb.Debug()
 	testDb.AutoMigrate(&UserModel{}, &UserCredentials{}, &ServiceProviderModel{}, &ScopeModel{}, &ClaimModel{})
-	err = testDb.Delete(&UserCredentials{}, "user_id = ?", 1).Error
+	err = testDb.Delete(&UserCredentials{}).Error
 	if err != nil {
 		panic(err)
 	}
@@ -69,6 +70,18 @@ func init() {
 	}
 	noCredUser.ID = 2
 	if testDb.Save(noCredUser).Error != nil {
+		panic("noCred user not created")
+	}
+	noCredUser2 = &UserModel{
+		Username:     "nocred2",
+		EmailAddress: "nocred2@domain.com",
+		Metadata: &UserMetadata{
+			Name: "No Cred2",
+		},
+		Inactive: false,
+	}
+	noCredUser2.ID = 3
+	if testDb.Save(noCredUser2).Error != nil {
 		panic("noCred user not created")
 	}
 }
