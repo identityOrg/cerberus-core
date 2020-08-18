@@ -178,3 +178,34 @@ func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 		}
 	})
 }
+
+func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
+	userStoreService := NewUserStoreService(testDb, 1, 5*time.Minute)
+	t.Run("blocked", func(t *testing.T) {
+		err := userStoreService.SetPassword(user.ID, "other password")
+		if assert.NoError(t, err) {
+			err = userStoreService.ValidatePassword(user.ID, "invalid")
+			if assert.Error(t, err) {
+				assert.EqualError(t, err, "password mismatch")
+			}
+		}
+	})
+	t.Run("fail due to block", func(t *testing.T) {
+		err := userStoreService.ValidatePassword(user.ID, "invalid")
+		if assert.Error(t, err) {
+			if assert.EqualError(t, err, "password mismatch") {
+				err = userStoreService.ValidatePassword(user.ID, "invalid")
+				if assert.Error(t, err) {
+					assert.EqualError(t, err, "credential blocked")
+				}
+			}
+		}
+	})
+	t.Run("reset password", func(t *testing.T) {
+		err := userStoreService.SetPassword(user.ID, "password")
+		if assert.NoError(t, err) {
+			err = userStoreService.ValidatePassword(user.ID, "password")
+			assert.NoError(t, err)
+		}
+	})
+}

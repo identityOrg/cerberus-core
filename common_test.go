@@ -41,16 +41,14 @@ func init() {
 		},
 		Credentials: []UserCredentials{
 			{
-				Type:                CredTypePassword,
-				Value:               string(password),
-				InvalidAttemptCount: 2,
-				Bocked:              false,
+				Type:   CredTypePassword,
+				Value:  string(password),
+				Bocked: false,
 			},
 			{
-				Type:                CredTypeTOTP,
-				Value:               key.Secret(),
-				InvalidAttemptCount: 2,
-				Bocked:              false,
+				Type:   CredTypeTOTP,
+				Value:  key.Secret(),
+				Bocked: false,
 			},
 		},
 		Inactive: false,

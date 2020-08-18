@@ -215,6 +215,7 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 		}
 	} else {
 		cred.Value = hashed
+		cred.FirstInvalidAttempt = nil
 		cred.Bocked = false
 	}
 	err = u.Db.Save(&cred).Error
