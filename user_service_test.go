@@ -53,13 +53,13 @@ func TestRerenderPng(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("de-activate", func(t *testing.T) {
-		err := userStoreService.DeactivateUser(user.ID)
+		err := userStoreService.DeactivateUser(TestUser.ID)
 		assert.NoError(t, err)
 	})
 	t.Run("activate", func(t *testing.T) {
-		err := userStoreService.ActivateUser(user.ID)
+		err := userStoreService.ActivateUser(TestUser.ID)
 		assert.NoError(t, err)
 	})
 	t.Run("user not exists", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	allUser, count, err := userStoreService.FindAllUser(0, 5)
 	assert.Nil(t, err)
 	if assert.Equal(t, uint(3), count) {
@@ -80,7 +80,7 @@ func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("valid", func(t *testing.T) {
 		err := userStoreService.ValidatePassword(1, "password")
 		assert.Nil(t, err)
@@ -94,7 +94,7 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("cred not found", func(t *testing.T) {
-		err := userStoreService.ValidatePassword(noCredUser2.ID, "password")
+		err := userStoreService.ValidatePassword(TestNoCredUser2.ID, "password")
 		if assert.Error(t, err) {
 			assert.EqualError(t, err, "credential not found")
 		}
@@ -102,11 +102,11 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("found", func(t *testing.T) {
-		foundUser, err := userStoreService.FindUserByEmail(user.EmailAddress)
+		foundUser, err := userStoreService.FindUserByEmail(TestUser.EmailAddress)
 		assert.NoError(t, err)
-		assert.Equal(t, user.ID, foundUser.ID)
+		assert.Equal(t, TestUser.ID, foundUser.ID)
 	})
 	t.Run("not found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByEmail("invalid@domain.com")
@@ -116,11 +116,11 @@ func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("found", func(t *testing.T) {
-		foundUser, err := userStoreService.FindUserByUsername(user.Username)
+		foundUser, err := userStoreService.FindUserByUsername(TestUser.Username)
 		assert.NoError(t, err)
-		assert.Equal(t, user.ID, foundUser.ID)
+		assert.Equal(t, TestUser.ID, foundUser.ID)
 	})
 	t.Run("not found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByUsername("invalid")
@@ -130,16 +130,16 @@ func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("valid", func(t *testing.T) {
-		code, err := totp.GenerateCode(user.Credentials[1].Value, time.Now())
+		code, err := totp.GenerateCode(TestUser.Credentials[1].Value, time.Now())
 		if assert.NoError(t, err) {
-			err = userStoreService.ValidateTOTP(user.ID, code)
+			err = userStoreService.ValidateTOTP(TestUser.ID, code)
 			assert.NoError(t, err)
 		}
 	})
 	t.Run("invalid", func(t *testing.T) {
-		err := userStoreService.ValidateTOTP(user.ID, "code")
+		err := userStoreService.ValidateTOTP(TestUser.ID, "code")
 		assert.Error(t, err)
 	})
 	t.Run("no user", func(t *testing.T) {
@@ -149,9 +149,9 @@ func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("success", func(t *testing.T) {
-		err := userStoreService.SetPassword(noCredUser.ID, "new password")
+		err := userStoreService.SetPassword(TestNoCredUser.ID, "new password")
 		assert.NoError(t, err)
 	})
 	t.Run("user not found", func(t *testing.T) {
@@ -161,9 +161,9 @@ func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 3, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 3, 5*time.Minute)
 	t.Run("success", func(t *testing.T) {
-		image, secret, err := userStoreService.GenerateTOTP(noCredUser.ID, "cerberus")
+		image, secret, err := userStoreService.GenerateTOTP(TestNoCredUser.ID, "cerberus")
 		if assert.NoError(t, err) {
 			assert.NotNil(t, image)
 			assert.NotEqual(t, "", secret)
@@ -180,21 +180,21 @@ func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 }
 
 func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
-	userStoreService := NewUserStoreService(testDb, 1, 5*time.Minute)
+	userStoreService := NewUserStoreService(TestDb, 1, 5*time.Minute)
 	t.Run("blocked", func(t *testing.T) {
-		err := userStoreService.SetPassword(user.ID, "other password")
+		err := userStoreService.SetPassword(TestUser.ID, "other password")
 		if assert.NoError(t, err) {
-			err = userStoreService.ValidatePassword(user.ID, "invalid")
+			err = userStoreService.ValidatePassword(TestUser.ID, "invalid")
 			if assert.Error(t, err) {
 				assert.EqualError(t, err, "password mismatch")
 			}
 		}
 	})
 	t.Run("fail due to block", func(t *testing.T) {
-		err := userStoreService.ValidatePassword(user.ID, "invalid")
+		err := userStoreService.ValidatePassword(TestUser.ID, "invalid")
 		if assert.Error(t, err) {
 			if assert.EqualError(t, err, "password mismatch") {
-				err = userStoreService.ValidatePassword(user.ID, "invalid")
+				err = userStoreService.ValidatePassword(TestUser.ID, "invalid")
 				if assert.Error(t, err) {
 					assert.EqualError(t, err, "credential blocked")
 				}
@@ -202,9 +202,9 @@ func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 		}
 	})
 	t.Run("reset password", func(t *testing.T) {
-		err := userStoreService.SetPassword(user.ID, "password")
+		err := userStoreService.SetPassword(TestUser.ID, "password")
 		if assert.NoError(t, err) {
-			err = userStoreService.ValidatePassword(user.ID, "password")
+			err = userStoreService.ValidatePassword(TestUser.ID, "password")
 			assert.NoError(t, err)
 		}
 	})

@@ -1,10 +1,9 @@
-package core
+package models
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"image"
 	"time"
 )
 
@@ -97,20 +96,3 @@ func (um *UserMetadata) Scan(src interface{}) error {
 		return errors.New("failed to unmarshal value for UserMetadata")
 	}
 }
-
-type IUserStoreService interface {
-	FindUserByUsername(username string) (*UserModel, error)
-	FindUserByEmail(email string) (*UserModel, error)
-	FindAllUser(page uint, pageSize uint) ([]UserModel, uint, error)
-	ActivateUser(id uint) error
-	DeactivateUser(id uint) error
-	SetPassword(id uint, password string) error
-	GenerateTOTP(id uint, issuer string) (img image.Image, secret string, err error)
-	ValidatePassword(id uint, password string) (err error)
-	ValidateTOTP(id uint, code string) (err error)
-}
-
-const (
-	CredTypePassword = 1
-	CredTypeTOTP     = 2
-)

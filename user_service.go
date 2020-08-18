@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -26,8 +27,8 @@ func NewUserStoreService(db *gorm.DB, maxAttempt uint, window time.Duration) IUs
 	}
 }
 
-func (u *UserStoreServiceImpl) FindUserByUsername(username string) (*UserModel, error) {
-	user := &UserModel{}
+func (u *UserStoreServiceImpl) FindUserByUsername(username string) (*models.UserModel, error) {
+	user := &models.UserModel{}
 	findUserResult := u.Db.Find(user, "username = ?", username)
 	if findUserResult.RecordNotFound() {
 		return nil, errors.New("user not found")
@@ -38,8 +39,8 @@ func (u *UserStoreServiceImpl) FindUserByUsername(username string) (*UserModel, 
 	return user, nil
 }
 
-func (u *UserStoreServiceImpl) FindUserByEmail(email string) (*UserModel, error) {
-	user := &UserModel{}
+func (u *UserStoreServiceImpl) FindUserByEmail(email string) (*models.UserModel, error) {
+	user := &models.UserModel{}
 	result := u.Db.Find(user, "email_address = ?", email)
 	if result.RecordNotFound() {
 		return nil, errors.New(fmt.Sprintf("user not found with email %s", email))
@@ -50,10 +51,10 @@ func (u *UserStoreServiceImpl) FindUserByEmail(email string) (*UserModel, error)
 	return user, nil
 }
 
-func (u *UserStoreServiceImpl) FindAllUser(page uint, pageSize uint) ([]UserModel, uint, error) {
-	var users []UserModel
+func (u *UserStoreServiceImpl) FindAllUser(page uint, pageSize uint) ([]models.UserModel, uint, error) {
+	var users []models.UserModel
 	var total uint
-	query := u.Db.Select([]string{"id", "username", "email_address"}).Model(&UserModel{})
+	query := u.Db.Select([]string{"id", "username", "email_address"}).Model(&models.UserModel{})
 	err := query.Limit(pageSize).Offset(pageSize * page).Find(&users).Error
 	if err != nil {
 		return nil, 0, err
@@ -67,7 +68,7 @@ func (u *UserStoreServiceImpl) ActivateUser(id uint) error {
 }
 
 func (u *UserStoreServiceImpl) updateStatus(id uint, inactive bool) error {
-	user := &UserModel{}
+	user := &models.UserModel{}
 	user.ID = id
 	updateResult := u.Db.Model(user).Update("inactive", inactive)
 	if updateResult.Error != nil {
@@ -83,7 +84,7 @@ func (u *UserStoreServiceImpl) DeactivateUser(id uint) error {
 }
 
 func (u *UserStoreServiceImpl) ValidatePassword(id uint, password string) error {
-	user := &UserModel{}
+	user := &models.UserModel{}
 	user.ID = id
 	findResult := u.Db.Find(user)
 	if findResult.RecordNotFound() {
@@ -96,7 +97,7 @@ func (u *UserStoreServiceImpl) ValidatePassword(id uint, password string) error 
 	if user.Inactive {
 		return errors.New("user inactive")
 	}
-	cred := &UserCredentials{}
+	cred := &models.UserCredentials{}
 	credResult := u.Db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypePassword)
 	if credResult.RecordNotFound() {
 		return errors.New("credential not found")
@@ -125,7 +126,7 @@ func (u *UserStoreServiceImpl) SetPassword(id uint, password string) (err error)
 }
 
 func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (image.Image, string, error) {
-	user := &UserModel{}
+	user := &models.UserModel{}
 	user.ID = id
 	result := u.Db.Find(user)
 	if result.RecordNotFound() {
@@ -155,7 +156,7 @@ func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (image.Image
 }
 
 func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
-	user := &UserModel{}
+	user := &models.UserModel{}
 	user.ID = id
 	findResult := u.Db.Find(user)
 	if findResult.RecordNotFound() {
@@ -168,7 +169,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 	if user.Inactive {
 		return errors.New("user inactive")
 	}
-	cred := &UserCredentials{}
+	cred := &models.UserCredentials{}
 	credResult := u.Db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypeTOTP)
 	if credResult.RecordNotFound() {
 		return errors.New("credential not found")
@@ -191,7 +192,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 }
 
 func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType uint8) error {
-	user := &UserModel{}
+	user := &models.UserModel{}
 	user.ID = id
 	findResult := u.Db.Find(user)
 	if findResult.RecordNotFound() {
@@ -201,13 +202,13 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 	if err != nil {
 		return err
 	}
-	var cred UserCredentials
+	var cred models.UserCredentials
 	result := u.Db.Find(&cred, "user_id = ? and cred_type = ?", id, credType)
 	if result.Error != nil && result.Error.Error() != "record not found" {
 		return result.Error
 	}
 	if result.RecordNotFound() {
-		cred = UserCredentials{
+		cred = models.UserCredentials{
 			UserID: id,
 			Type:   credType,
 			Value:  hashed,

@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"os"
@@ -14,8 +15,8 @@ func TestServiceProviderModel_Migrate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	model := &ServiceProviderModel{
-		Metadata: &ServiceProviderMetadata{},
+	model := &models.ServiceProviderModel{
+		Metadata: &models.ServiceProviderMetadata{},
 	}
 	db.AutoMigrate(model)
 
@@ -27,7 +28,7 @@ func TestServiceProviderModel_Migrate(t *testing.T) {
 
 	println(model.ID)
 
-	modal1 := &ServiceProviderModel{}
+	modal1 := &models.ServiceProviderModel{}
 
 	db.Find(modal1, model.ID)
 
@@ -36,7 +37,7 @@ func TestServiceProviderModel_Migrate(t *testing.T) {
 
 func TestPatch(t *testing.T) {
 	patchData := "{\"Metadata\":{\"redirect_uris\":[\"kkkk\"]}}"
-	model := &ServiceProviderModel{
+	model := &models.ServiceProviderModel{
 		Name: "some name",
 	}
 

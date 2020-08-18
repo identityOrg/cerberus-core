@@ -1,27 +1,28 @@
 package core
 
 import (
+	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var testDb *gorm.DB
-var user *UserModel
-var noCredUser *UserModel
-var noCredUser2 *UserModel
+var TestDb *gorm.DB
+var TestUser *models.UserModel
+var TestNoCredUser *models.UserModel
+var TestNoCredUser2 *models.UserModel
 var key *otp.Key
 
 func init() {
 	var err error
-	testDb, err = gorm.Open("sqlite3", "test.db")
+	TestDb, err = gorm.Open("sqlite3", "test.db")
 	if err != nil {
 		panic(err)
 	}
-	testDb = testDb.Debug()
-	testDb.AutoMigrate(&UserModel{}, &UserCredentials{}, &ServiceProviderModel{}, &ScopeModel{}, &ClaimModel{})
-	err = testDb.Delete(&UserCredentials{}).Error
+	TestDb = TestDb.Debug()
+	TestDb.AutoMigrate(&models.UserModel{}, &models.UserCredentials{}, &models.ServiceProviderModel{}, &models.ScopeModel{}, &models.ClaimModel{})
+	err = TestDb.Delete(&models.UserCredentials{}).Error
 	if err != nil {
 		panic(err)
 	}
@@ -33,13 +34,13 @@ func init() {
 		Issuer:      "https://localhost:8080",
 		AccountName: "user",
 	})
-	user = &UserModel{
+	TestUser = &models.UserModel{
 		Username:     "user",
 		EmailAddress: "user@domain.com",
-		Metadata: &UserMetadata{
+		Metadata: &models.UserMetadata{
 			Name: "Name Name",
 		},
-		Credentials: []UserCredentials{
+		Credentials: []models.UserCredentials{
 			{
 				Type:   CredTypePassword,
 				Value:  string(password),
@@ -53,33 +54,33 @@ func init() {
 		},
 		Inactive: false,
 	}
-	user.ID = 1
-	err = testDb.Save(user).Error
+	TestUser.ID = 1
+	err = TestDb.Save(TestUser).Error
 	if err != nil {
 		panic(err)
 	}
-	noCredUser = &UserModel{
+	TestNoCredUser = &models.UserModel{
 		Username:     "nocred",
 		EmailAddress: "nocred@domain.com",
-		Metadata: &UserMetadata{
+		Metadata: &models.UserMetadata{
 			Name: "No Cred",
 		},
 		Inactive: false,
 	}
-	noCredUser.ID = 2
-	if testDb.Save(noCredUser).Error != nil {
+	TestNoCredUser.ID = 2
+	if TestDb.Save(TestNoCredUser).Error != nil {
 		panic("noCred user not created")
 	}
-	noCredUser2 = &UserModel{
+	TestNoCredUser2 = &models.UserModel{
 		Username:     "nocred2",
 		EmailAddress: "nocred2@domain.com",
-		Metadata: &UserMetadata{
+		Metadata: &models.UserMetadata{
 			Name: "No Cred2",
 		},
 		Inactive: false,
 	}
-	noCredUser2.ID = 3
-	if testDb.Save(noCredUser2).Error != nil {
+	TestNoCredUser2.ID = 3
+	if TestDb.Save(TestNoCredUser2).Error != nil {
 		panic("noCred user not created")
 	}
 }
