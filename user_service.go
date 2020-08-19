@@ -332,10 +332,14 @@ func (u *UserStoreServiceImpl) InitiateEmailChange(ctx context.Context, id uint,
 	if updateResult.RowsAffected != 1 {
 		return "", errors.New("update email initiation failed")
 	}
-	return "", nil
+	return u.GenerateUserOTP(ctx, id, 6)
 }
 
-func (u *UserStoreServiceImpl) CompleteEmailChange(ctx context.Context, id uint, code string) (err error) {
+func (u *UserStoreServiceImpl) CompleteEmailChange(ctx context.Context, id uint, code string) error {
+	err := u.ValidateOTP(ctx, id, code)
+	if err != nil {
+		return err
+	}
 	user := &models.UserModel{}
 	user.ID = id
 	db := u.getTransaction(ctx)

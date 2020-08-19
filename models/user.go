@@ -48,7 +48,7 @@ func (o UserOTP) TableName() string {
 }
 
 func (uc *UserCredentials) IncrementInvalidAttempt(maxAllowed uint, window time.Duration) (blocked bool) {
-	if uc.Bocked {
+	if uc.Bocked || maxAllowed < 0 {
 		return uc.Bocked
 	}
 	now := time.Now()
