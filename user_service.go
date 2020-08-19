@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
@@ -221,4 +222,163 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 	}
 	err = u.Db.Save(&cred).Error
 	return err
+}
+
+func (u *UserStoreServiceImpl) GetUser(id uint) (*models.UserModel, error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Find(user)
+	if findResult.RecordNotFound() {
+		return nil, errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return nil, findResult.Error
+	}
+	return user, nil
+}
+
+func (u *UserStoreServiceImpl) UsernameAvailable(username string) (available bool) {
+	user := &models.UserModel{}
+	result := u.Db.Select("username").Find(user, "username = ?", username)
+	return !result.RecordNotFound()
+}
+
+func (u *UserStoreServiceImpl) ChangeUsername(id uint, username string) (err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Select("username").Find(user)
+	if findResult.RecordNotFound() {
+		return errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return findResult.Error
+	}
+	updateResult := u.Db.Model(user).Update("username", username)
+	if updateResult.Error != nil {
+		return updateResult.Error
+	}
+	return nil
+}
+
+func (u *UserStoreServiceImpl) InitiateEmailChange(id uint, email string) (code string, err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Find(user)
+	if findResult.RecordNotFound() {
+		return "", errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return "", findResult.Error
+	}
+	user.TempEmailAddress = email
+	updateResult := u.Db.Save(user)
+	if updateResult.Error != nil {
+		return "", updateResult.Error
+	}
+	if updateResult.RowsAffected != 1 {
+		return "", errors.New("update email initiation failed")
+	}
+	return "", nil
+}
+
+func (u *UserStoreServiceImpl) CompleteEmailChange(id uint, code string) (err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Find(user)
+	if findResult.RecordNotFound() {
+		return errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return findResult.Error
+	}
+	user.EmailAddress = user.TempEmailAddress
+	user.TempEmailAddress = ""
+	updateResult := u.Db.Save(user)
+	if updateResult.Error != nil {
+		return updateResult.Error
+	}
+	if updateResult.RowsAffected != 1 {
+		return errors.New("update email complete failed")
+	}
+	return nil
+}
+
+func (u *UserStoreServiceImpl) CreateUser(username string, email string, metadata *models.UserMetadata) (id uint, err error) {
+	user := &models.UserModel{
+		Username:         username,
+		TempEmailAddress: email,
+		Metadata:         metadata,
+		Inactive:         true,
+	}
+	saveResult := u.Db.Save(user)
+	if saveResult.Error != nil {
+		return 0, saveResult.Error
+	}
+	return user.ID, nil
+}
+
+func (u *UserStoreServiceImpl) UpdateUser(id uint, metadata *models.UserMetadata) (err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Find(user)
+	if findResult.RecordNotFound() {
+		return errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return findResult.Error
+	}
+	user.Metadata = metadata
+	return u.Db.Save(user).Error
+}
+
+func (u *UserStoreServiceImpl) PatchUser(id uint, metadata *models.UserMetadata) (err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	findResult := u.Db.Find(user)
+	if findResult.RecordNotFound() {
+		return errors.New("user not found")
+	}
+	if findResult.Error != nil {
+		return findResult.Error
+	}
+	jsonData, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonData, user.Metadata)
+	if err != nil {
+		return err
+	}
+	return u.Db.Save(user).Error
+}
+
+func (u *UserStoreServiceImpl) DeleteUser(id uint) (err error) {
+	user := &models.UserModel{}
+	user.ID = id
+	return u.Db.Delete(user).Error
+}
+
+func (u *UserStoreServiceImpl) GenerateUserOTP(id uint, length uint8) (code string, err error) {
+	random, err := GenerateRandom(true, length)
+	if err != nil {
+		return "", err
+	}
+	otp := &models.UserOTP{
+		ValueHash: random,
+		UserID:    id,
+	}
+	err = u.Db.Save(otp).Error
+	if err != nil {
+		return "", err
+	}
+	return random, nil
+}
+
+func (u *UserStoreServiceImpl) ValidateOTP(id uint, code string) (err error) {
+	otp := &models.UserOTP{}
+	findResult := u.Db.Find(otp, "user_id = ? and hash_value = ?", id, code)
+	if findResult.Error != nil {
+		return findResult.Error
+	}
+	return u.Db.Delete(otp).Error
 }
