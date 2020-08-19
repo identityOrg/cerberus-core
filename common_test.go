@@ -68,8 +68,9 @@ func init() {
 		Inactive: false,
 	}
 	TestNoCredUser.ID = 2
-	if TestDb.Save(TestNoCredUser).Error != nil {
-		panic("noCred user not created")
+	err = TestDb.Save(TestNoCredUser).Error
+	if err != nil {
+		panic("noCred user not created:" + err.Error())
 	}
 	TestNoCredUser2 = &models.UserModel{
 		Username:     "nocred2",
@@ -80,7 +81,8 @@ func init() {
 		Inactive: false,
 	}
 	TestNoCredUser2.ID = 3
-	if TestDb.Save(TestNoCredUser2).Error != nil {
-		panic("noCred user not created")
+	err = TestDb.Save(TestNoCredUser2).Error
+	if err != nil {
+		panic("noCred user not created:" + err.Error())
 	}
 }

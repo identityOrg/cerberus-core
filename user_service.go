@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,9 +30,50 @@ func NewUserStoreService(db *gorm.DB, maxAttempt uint, window time.Duration) IUs
 	}
 }
 
-func (u *UserStoreServiceImpl) FindUserByUsername(username string) (*models.UserModel, error) {
+const txKey = "gorm.tx"
+
+func (u *UserStoreServiceImpl) BeginTransaction(ctx context.Context, readOnly bool) context.Context {
+	opt := &sql.TxOptions{
+		ReadOnly: readOnly,
+	}
+	tx := u.Db.BeginTx(ctx, opt)
+	return context.WithValue(ctx, txKey, tx)
+}
+
+func (u *UserStoreServiceImpl) CommitTransaction(ctx context.Context) context.Context {
+	tx := ctx.Value(txKey)
+	if tx != nil {
+		if db, ok := tx.(*gorm.DB); ok {
+			db.Commit()
+		}
+	}
+	return context.WithValue(ctx, txKey, nil)
+}
+
+func (u *UserStoreServiceImpl) RollbackTransaction(ctx context.Context) context.Context {
+	tx := ctx.Value(txKey)
+	if tx != nil {
+		if db, ok := tx.(*gorm.DB); ok {
+			db.Rollback()
+		}
+	}
+	return context.WithValue(ctx, txKey, nil)
+}
+
+func (u *UserStoreServiceImpl) getTransaction(ctx context.Context) *gorm.DB {
+	tx := ctx.Value(txKey)
+	if tx != nil {
+		if db, ok := tx.(*gorm.DB); ok {
+			return db
+		}
+	}
+	panic("transaction doesnt exists")
+}
+
+func (u *UserStoreServiceImpl) FindUserByUsername(ctx context.Context, username string) (*models.UserModel, error) {
 	user := &models.UserModel{}
-	findUserResult := u.Db.Find(user, "username = ?", username)
+	db := u.getTransaction(ctx)
+	findUserResult := db.Find(user, "username = ?", username)
 	if findUserResult.RecordNotFound() {
 		return nil, errors.New("user not found")
 	}
@@ -40,9 +83,10 @@ func (u *UserStoreServiceImpl) FindUserByUsername(username string) (*models.User
 	return user, nil
 }
 
-func (u *UserStoreServiceImpl) FindUserByEmail(email string) (*models.UserModel, error) {
+func (u *UserStoreServiceImpl) FindUserByEmail(ctx context.Context, email string) (*models.UserModel, error) {
 	user := &models.UserModel{}
-	result := u.Db.Find(user, "email_address = ?", email)
+	db := u.getTransaction(ctx)
+	result := db.Find(user, "email_address = ?", email)
 	if result.RecordNotFound() {
 		return nil, errors.New(fmt.Sprintf("user not found with email %s", email))
 	}
@@ -52,10 +96,11 @@ func (u *UserStoreServiceImpl) FindUserByEmail(email string) (*models.UserModel,
 	return user, nil
 }
 
-func (u *UserStoreServiceImpl) FindAllUser(page uint, pageSize uint) ([]models.UserModel, uint, error) {
+func (u *UserStoreServiceImpl) FindAllUser(ctx context.Context, page uint, pageSize uint) ([]models.UserModel, uint, error) {
 	var users []models.UserModel
 	var total uint
-	query := u.Db.Select([]string{"id", "username", "email_address"}).Model(&models.UserModel{})
+	db := u.getTransaction(ctx)
+	query := db.Select([]string{"id", "username", "email_address"}).Model(&models.UserModel{})
 	err := query.Limit(pageSize).Offset(pageSize * page).Find(&users).Error
 	if err != nil {
 		return nil, 0, err
@@ -64,14 +109,15 @@ func (u *UserStoreServiceImpl) FindAllUser(page uint, pageSize uint) ([]models.U
 	return users, total, nil
 }
 
-func (u *UserStoreServiceImpl) ActivateUser(id uint) error {
-	return u.updateStatus(id, false)
+func (u *UserStoreServiceImpl) ActivateUser(ctx context.Context, id uint) error {
+	return u.updateStatus(ctx, id, false)
 }
 
-func (u *UserStoreServiceImpl) updateStatus(id uint, inactive bool) error {
+func (u *UserStoreServiceImpl) updateStatus(ctx context.Context, id uint, inactive bool) error {
 	user := &models.UserModel{}
 	user.ID = id
-	updateResult := u.Db.Model(user).Update("inactive", inactive)
+	db := u.getTransaction(ctx)
+	updateResult := db.Model(user).Update("inactive", inactive)
 	if updateResult.Error != nil {
 		return updateResult.Error
 	} else if updateResult.RowsAffected != 1 {
@@ -80,14 +126,15 @@ func (u *UserStoreServiceImpl) updateStatus(id uint, inactive bool) error {
 	return nil
 }
 
-func (u *UserStoreServiceImpl) DeactivateUser(id uint) error {
-	return u.updateStatus(id, true)
+func (u *UserStoreServiceImpl) DeactivateUser(ctx context.Context, id uint) error {
+	return u.updateStatus(ctx, id, true)
 }
 
-func (u *UserStoreServiceImpl) ValidatePassword(id uint, password string) error {
+func (u *UserStoreServiceImpl) ValidatePassword(ctx context.Context, id uint, password string) error {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -99,7 +146,7 @@ func (u *UserStoreServiceImpl) ValidatePassword(id uint, password string) error 
 		return errors.New("user inactive")
 	}
 	cred := &models.UserCredentials{}
-	credResult := u.Db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypePassword)
+	credResult := db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypePassword)
 	if credResult.RecordNotFound() {
 		return errors.New("credential not found")
 	}
@@ -112,24 +159,25 @@ func (u *UserStoreServiceImpl) ValidatePassword(id uint, password string) error 
 	err = bcrypt.CompareHashAndPassword([]byte(cred.Value), []byte(password))
 	if err != nil {
 		cred.IncrementInvalidAttempt(u.MaxAllowedInvalidAttempt, u.InvalidAttemptWindow)
-		u.Db.Save(cred)
+		db.Save(cred)
 		return errors.New("password mismatch")
 	}
 	return nil
 }
 
-func (u *UserStoreServiceImpl) SetPassword(id uint, password string) (err error) {
+func (u *UserStoreServiceImpl) SetPassword(ctx context.Context, id uint, password string) (err error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), 13)
 	if err != nil {
 		return
 	}
-	return u.updateCredential(id, string(hashed), CredTypePassword)
+	return u.updateCredential(ctx, id, string(hashed), CredTypePassword)
 }
 
-func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (image.Image, string, error) {
+func (u *UserStoreServiceImpl) GenerateTOTP(ctx context.Context, id uint, issuer string) (image.Image, string, error) {
 	user := &models.UserModel{}
 	user.ID = id
-	result := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	result := db.Find(user)
 	if result.RecordNotFound() {
 		return nil, "", errors.New("user not found")
 	}
@@ -149,17 +197,18 @@ func (u *UserStoreServiceImpl) GenerateTOTP(id uint, issuer string) (image.Image
 	if err != nil {
 		return nil, "", err
 	}
-	err = u.updateCredential(id, key.Secret(), CredTypeTOTP)
+	err = u.updateCredential(ctx, id, key.Secret(), CredTypeTOTP)
 	if err != nil {
 		return nil, "", err
 	}
 	return img, key.Secret(), nil
 }
 
-func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
+func (u *UserStoreServiceImpl) ValidateTOTP(ctx context.Context, id uint, code string) error {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -171,7 +220,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 		return errors.New("user inactive")
 	}
 	cred := &models.UserCredentials{}
-	credResult := u.Db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypeTOTP)
+	credResult := db.Find(cred, "user_id = ? and cred_type = ?", id, CredTypeTOTP)
 	if credResult.RecordNotFound() {
 		return errors.New("credential not found")
 	}
@@ -184,7 +233,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 	valid := totp.Validate(code, cred.Value)
 	if !valid {
 		cred.IncrementInvalidAttempt(u.MaxAllowedInvalidAttempt, u.InvalidAttemptWindow)
-		u.Db.Save(cred)
+		db.Save(cred)
 		err = errors.New("totp validation failed")
 		return err
 	} else {
@@ -192,10 +241,11 @@ func (u *UserStoreServiceImpl) ValidateTOTP(id uint, code string) error {
 	}
 }
 
-func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType uint8) error {
+func (u *UserStoreServiceImpl) updateCredential(ctx context.Context, id uint, hashed string, credType uint8) error {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -204,7 +254,7 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 		return err
 	}
 	var cred models.UserCredentials
-	result := u.Db.Find(&cred, "user_id = ? and cred_type = ?", id, credType)
+	result := db.Find(&cred, "user_id = ? and cred_type = ?", id, credType)
 	if result.Error != nil && result.Error.Error() != "record not found" {
 		return result.Error
 	}
@@ -220,14 +270,15 @@ func (u *UserStoreServiceImpl) updateCredential(id uint, hashed string, credType
 		cred.FirstInvalidAttempt = nil
 		cred.Bocked = false
 	}
-	err = u.Db.Save(&cred).Error
+	err = db.Save(&cred).Error
 	return err
 }
 
-func (u *UserStoreServiceImpl) GetUser(id uint) (*models.UserModel, error) {
+func (u *UserStoreServiceImpl) GetUser(ctx context.Context, id uint) (*models.UserModel, error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return nil, errors.New("user not found")
 	}
@@ -237,33 +288,36 @@ func (u *UserStoreServiceImpl) GetUser(id uint) (*models.UserModel, error) {
 	return user, nil
 }
 
-func (u *UserStoreServiceImpl) UsernameAvailable(username string) (available bool) {
+func (u *UserStoreServiceImpl) UsernameAvailable(ctx context.Context, username string) (available bool) {
 	user := &models.UserModel{}
-	result := u.Db.Select("username").Find(user, "username = ?", username)
+	db := u.getTransaction(ctx)
+	result := db.Select("username").Find(user, "username = ?", username)
 	return !result.RecordNotFound()
 }
 
-func (u *UserStoreServiceImpl) ChangeUsername(id uint, username string) (err error) {
+func (u *UserStoreServiceImpl) ChangeUsername(ctx context.Context, id uint, username string) (err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Select("username").Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Select("username").Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
 	if findResult.Error != nil {
 		return findResult.Error
 	}
-	updateResult := u.Db.Model(user).Update("username", username)
+	updateResult := db.Model(user).Update("username", username)
 	if updateResult.Error != nil {
 		return updateResult.Error
 	}
 	return nil
 }
 
-func (u *UserStoreServiceImpl) InitiateEmailChange(id uint, email string) (code string, err error) {
+func (u *UserStoreServiceImpl) InitiateEmailChange(ctx context.Context, id uint, email string) (code string, err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return "", errors.New("user not found")
 	}
@@ -271,7 +325,7 @@ func (u *UserStoreServiceImpl) InitiateEmailChange(id uint, email string) (code 
 		return "", findResult.Error
 	}
 	user.TempEmailAddress = email
-	updateResult := u.Db.Save(user)
+	updateResult := db.Save(user)
 	if updateResult.Error != nil {
 		return "", updateResult.Error
 	}
@@ -281,10 +335,11 @@ func (u *UserStoreServiceImpl) InitiateEmailChange(id uint, email string) (code 
 	return "", nil
 }
 
-func (u *UserStoreServiceImpl) CompleteEmailChange(id uint, code string) (err error) {
+func (u *UserStoreServiceImpl) CompleteEmailChange(ctx context.Context, id uint, code string) (err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -293,7 +348,7 @@ func (u *UserStoreServiceImpl) CompleteEmailChange(id uint, code string) (err er
 	}
 	user.EmailAddress = user.TempEmailAddress
 	user.TempEmailAddress = ""
-	updateResult := u.Db.Save(user)
+	updateResult := db.Save(user)
 	if updateResult.Error != nil {
 		return updateResult.Error
 	}
@@ -303,24 +358,26 @@ func (u *UserStoreServiceImpl) CompleteEmailChange(id uint, code string) (err er
 	return nil
 }
 
-func (u *UserStoreServiceImpl) CreateUser(username string, email string, metadata *models.UserMetadata) (id uint, err error) {
+func (u *UserStoreServiceImpl) CreateUser(ctx context.Context, username string, email string, metadata *models.UserMetadata) (id uint, err error) {
 	user := &models.UserModel{
 		Username:         username,
 		TempEmailAddress: email,
 		Metadata:         metadata,
 		Inactive:         true,
 	}
-	saveResult := u.Db.Save(user)
+	db := u.getTransaction(ctx)
+	saveResult := db.Save(user)
 	if saveResult.Error != nil {
 		return 0, saveResult.Error
 	}
 	return user.ID, nil
 }
 
-func (u *UserStoreServiceImpl) UpdateUser(id uint, metadata *models.UserMetadata) (err error) {
+func (u *UserStoreServiceImpl) UpdateUser(ctx context.Context, id uint, metadata *models.UserMetadata) (err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -328,13 +385,14 @@ func (u *UserStoreServiceImpl) UpdateUser(id uint, metadata *models.UserMetadata
 		return findResult.Error
 	}
 	user.Metadata = metadata
-	return u.Db.Save(user).Error
+	return db.Save(user).Error
 }
 
-func (u *UserStoreServiceImpl) PatchUser(id uint, metadata *models.UserMetadata) (err error) {
+func (u *UserStoreServiceImpl) PatchUser(ctx context.Context, id uint, metadata *models.UserMetadata) (err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	findResult := u.Db.Find(user)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("user not found")
 	}
@@ -349,16 +407,17 @@ func (u *UserStoreServiceImpl) PatchUser(id uint, metadata *models.UserMetadata)
 	if err != nil {
 		return err
 	}
-	return u.Db.Save(user).Error
+	return db.Save(user).Error
 }
 
-func (u *UserStoreServiceImpl) DeleteUser(id uint) (err error) {
+func (u *UserStoreServiceImpl) DeleteUser(ctx context.Context, id uint) (err error) {
 	user := &models.UserModel{}
 	user.ID = id
-	return u.Db.Delete(user).Error
+	db := u.getTransaction(ctx)
+	return db.Delete(user).Error
 }
 
-func (u *UserStoreServiceImpl) GenerateUserOTP(id uint, length uint8) (code string, err error) {
+func (u *UserStoreServiceImpl) GenerateUserOTP(ctx context.Context, id uint, length uint8) (code string, err error) {
 	random, err := GenerateRandom(true, length)
 	if err != nil {
 		return "", err
@@ -367,18 +426,20 @@ func (u *UserStoreServiceImpl) GenerateUserOTP(id uint, length uint8) (code stri
 		ValueHash: random,
 		UserID:    id,
 	}
-	err = u.Db.Save(otp).Error
+	db := u.getTransaction(ctx)
+	err = db.Save(otp).Error
 	if err != nil {
 		return "", err
 	}
 	return random, nil
 }
 
-func (u *UserStoreServiceImpl) ValidateOTP(id uint, code string) (err error) {
+func (u *UserStoreServiceImpl) ValidateOTP(ctx context.Context, id uint, code string) (err error) {
 	otp := &models.UserOTP{}
-	findResult := u.Db.Find(otp, "user_id = ? and hash_value = ?", id, code)
+	db := u.getTransaction(ctx)
+	findResult := db.Find(otp, "user_id = ? and hash_value = ?", id, code)
 	if findResult.Error != nil {
 		return findResult.Error
 	}
-	return u.Db.Delete(otp).Error
+	return db.Delete(otp).Error
 }

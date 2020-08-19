@@ -11,7 +11,7 @@ type UserModel struct {
 	BaseModel
 	Username         string            `sql:"column:username;unique_index" json:"username,omitempty"`
 	EmailAddress     string            `sql:"column:email_address;size:512;unique_index" json:"email_address,omitempty"`
-	TempEmailAddress string            `sql:"column:temp_email_address;size:512;unique_index" json:"-"`
+	TempEmailAddress string            `sql:"column:temp_email_address;size:512;" json:"-"`
 	Metadata         *UserMetadata     `sql:"column:metadata;type:lob" json:"metadata,omitempty"`
 	Credentials      []UserCredentials `sql:"foreignkey:user_id" json:"credentials,omitempty"`
 	Inactive         bool              `sql:"column:inactive" json:"inactive,omitempty"`
