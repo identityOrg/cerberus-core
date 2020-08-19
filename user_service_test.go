@@ -209,12 +209,9 @@ func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 	userStoreService := NewUserStoreService(TestDb, 1, 5*time.Minute)
 	ctx = userStoreService.BeginTransaction(ctx, true)
 	t.Run("blocked", func(t *testing.T) {
-		err := userStoreService.SetPassword(ctx, TestUser.ID, "other password")
-		if assert.NoError(t, err) {
-			err = userStoreService.ValidatePassword(ctx, TestUser.ID, "invalid")
-			if assert.Error(t, err) {
-				assert.EqualError(t, err, "password mismatch")
-			}
+		err := userStoreService.ValidatePassword(ctx, TestUser.ID, "invalid")
+		if assert.Error(t, err) {
+			assert.EqualError(t, err, "password mismatch")
 		}
 	})
 	t.Run("fail due to block", func(t *testing.T) {
