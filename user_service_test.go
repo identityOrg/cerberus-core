@@ -237,3 +237,25 @@ func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 	})
 	userStoreService.RollbackTransaction(ctx)
 }
+
+func TestUserStoreServiceImpl_GetUser(t *testing.T) {
+	ctx := context.Background()
+	userStoreService := NewUserStoreService(TestDb, 1, 5*time.Minute)
+	ctx = userStoreService.BeginTransaction(ctx, true)
+	t.Run("success", func(t *testing.T) {
+		user, err := userStoreService.GetUser(ctx, TestUser.ID)
+		if assert.NoError(t, err) {
+			if assert.NotNil(t, user) {
+				assert.Equal(t, TestUser.Username, user.Username)
+			}
+		}
+	})
+	t.Run("fail", func(t *testing.T) {
+		user, err := userStoreService.GetUser(ctx, 2000)
+		if assert.Error(t, err) {
+			assert.Nil(t, user)
+			assert.EqualError(t, err, "user not found")
+		}
+	})
+	userStoreService.RollbackTransaction(ctx)
+}

@@ -50,6 +50,34 @@ type (
 		CommitTransaction(ctx context.Context) context.Context
 		RollbackTransaction(ctx context.Context) context.Context
 	}
+	ISPStoreService interface {
+		ISPCommonService
+		ISPUpdateService
+		ISPCredentialService
+		ISPQueryService
+	}
+	ISPCommonService interface {
+		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)
+		UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error)
+		PatchSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error)
+		DeleteSP(ctx context.Context, id uint) (err error)
+	}
+	ISPUpdateService interface {
+		ActivateSP(ctx context.Context, id uint) error
+		DeactivateSP(ctx context.Context, id uint) error
+	}
+	ISPCredentialService interface {
+		ResetClientCredentials(ctx context.Context, id uint) (clientId, clientSecret string, err error)
+		ValidateClientCredentials(ctx context.Context, clientId, clientSecret string) (id uint, err error)
+		ValidateSecretSignature(ctx context.Context, token string) (id uint, err error)
+		ValidatePrivateKeySignature(ctx context.Context, token string) (id uint, err error)
+	}
+	ISPQueryService interface {
+		GetSP(ctx context.Context, id uint) (sp *models.ServiceProviderModel, err error)
+		FindSPByClientId(ctx context.Context, clientId string) (sp *models.ServiceProviderModel, err error)
+		FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error)
+		FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error)
+	}
 )
 
 const (

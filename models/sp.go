@@ -13,6 +13,7 @@ type ServiceProviderModel struct {
 	Description  string                   `sql:"column:description;size:1024" json:"description,omitempty"`
 	ClientID     string                   `sql:"column:client_id;unique_index;not null" json:"client_id,omitempty"`
 	ClientSecret string                   `sql:"column:client_secret" json:"client_secret,omitempty"`
+	Active       bool                     `sql:"column:active" json:"active,omitempty"`
 	Metadata     *ServiceProviderMetadata `sql:"column:metadata;type:lob" json:"metadata,omitempty"`
 }
 
@@ -21,6 +22,7 @@ func (sp ServiceProviderModel) TableName() string {
 }
 
 type ServiceProviderMetadata struct {
+	ClientName                   string                 `json:"client_name,omitempty"`
 	RedirectUris                 []string               `json:"redirect_uris,omitempty"`
 	ResponseTypes                []string               `json:"response_types,omitempty"`
 	GrantTypes                   []string               `json:"grant_types,omitempty"`
