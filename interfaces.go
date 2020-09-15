@@ -55,6 +55,7 @@ type (
 		ISPUpdateService
 		ISPCredentialService
 		ISPQueryService
+		ITransactionalStore
 	}
 	ISPCommonService interface {
 		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)

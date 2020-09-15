@@ -3,6 +3,7 @@ module github.com/identityOrg/cerberus-core
 go 1.14
 
 require (
+	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/jinzhu/gorm v1.9.15
 	github.com/pquerna/otp v1.2.0

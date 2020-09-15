@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/google/uuid"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
 	"github.com/pquerna/otp"
@@ -8,11 +9,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var TestDb *gorm.DB
-var TestUser *models.UserModel
-var TestNoCredUser *models.UserModel
-var TestNoCredUser2 *models.UserModel
-var key *otp.Key
+var (
+	TestDb          *gorm.DB
+	TestUser        *models.UserModel
+	TestNoCredUser  *models.UserModel
+	TestNoCredUser2 *models.UserModel
+	key             *otp.Key
+	TestSP          *models.ServiceProviderModel
+	TestSP2         *models.ServiceProviderModel
+)
 
 func init() {
 	var err error
@@ -26,6 +31,66 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	createTestUser()
+	createNoCredUser()
+	createNoCredUser2()
+	createTestSP()
+}
+
+func createTestSP() {
+	TestSP = &models.ServiceProviderModel{
+		Name:         "TestSP",
+		Description:  "A Service Provider for test",
+		ClientID:     uuid.New().String(),
+		ClientSecret: uuid.New().String(),
+		Active:       true,
+		Metadata: &models.ServiceProviderMetadata{
+			RedirectUris:    []string{"http://localhost:9090/redirect"},
+			ResponseTypes:   []string{"code", "token", "token id_token", "id_token", "code id_token"},
+			GrantTypes:      []string{"authorization_code", "password"},
+			ApplicationType: "web",
+		},
+	}
+	TestSP.ID = 1
+	err := TestDb.Save(TestSP).Error
+	if err != nil {
+		panic(err)
+	}
+}
+
+func createNoCredUser2() {
+	TestNoCredUser2 = &models.UserModel{
+		Username:     "nocred2",
+		EmailAddress: "nocred2@domain.com",
+		Metadata: &models.UserMetadata{
+			Name: "No Cred2",
+		},
+		Inactive: false,
+	}
+	TestNoCredUser2.ID = 3
+	err := TestDb.Save(TestNoCredUser2).Error
+	if err != nil {
+		panic("noCred user not created:" + err.Error())
+	}
+}
+
+func createNoCredUser() {
+	TestNoCredUser = &models.UserModel{
+		Username:     "nocred",
+		EmailAddress: "nocred@domain.com",
+		Metadata: &models.UserMetadata{
+			Name: "No Cred",
+		},
+		Inactive: false,
+	}
+	TestNoCredUser.ID = 2
+	err := TestDb.Save(TestNoCredUser).Error
+	if err != nil {
+		panic("noCred user not created:" + err.Error())
+	}
+}
+
+func createTestUser() {
 	password, err := bcrypt.GenerateFromPassword([]byte("password"), 13)
 	if err != nil {
 		panic(err)
@@ -58,31 +123,5 @@ func init() {
 	err = TestDb.Save(TestUser).Error
 	if err != nil {
 		panic(err)
-	}
-	TestNoCredUser = &models.UserModel{
-		Username:     "nocred",
-		EmailAddress: "nocred@domain.com",
-		Metadata: &models.UserMetadata{
-			Name: "No Cred",
-		},
-		Inactive: false,
-	}
-	TestNoCredUser.ID = 2
-	err = TestDb.Save(TestNoCredUser).Error
-	if err != nil {
-		panic("noCred user not created:" + err.Error())
-	}
-	TestNoCredUser2 = &models.UserModel{
-		Username:     "nocred2",
-		EmailAddress: "nocred2@domain.com",
-		Metadata: &models.UserMetadata{
-			Name: "No Cred2",
-		},
-		Inactive: false,
-	}
-	TestNoCredUser2.ID = 3
-	err = TestDb.Save(TestNoCredUser2).Error
-	if err != nil {
-		panic("noCred user not created:" + err.Error())
 	}
 }
