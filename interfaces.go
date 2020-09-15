@@ -79,6 +79,13 @@ type (
 		FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error)
 		FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error)
 	}
+
+	ITextEncrypts interface {
+		EncryptText(ctx context.Context, text string) (cypherText string, err error)
+	}
+	ITextDecrypts interface {
+		DecryptText(ctx context.Context, cypherText string) (text string, err error)
+	}
 )
 
 const (

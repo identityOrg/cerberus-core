@@ -14,6 +14,7 @@ type ServiceProviderModel struct {
 	ClientID     string                   `sql:"column:client_id;unique_index;not null" json:"client_id,omitempty"`
 	ClientSecret string                   `sql:"column:client_secret" json:"client_secret,omitempty"`
 	Active       bool                     `sql:"column:active" json:"active,omitempty"`
+	Public       bool                     `sql:"column:public" json:"public,omitempty"`
 	Metadata     *ServiceProviderMetadata `sql:"column:metadata;type:lob" json:"metadata,omitempty"`
 }
 
