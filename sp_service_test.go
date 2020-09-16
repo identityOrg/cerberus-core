@@ -8,7 +8,7 @@ import (
 )
 
 func TestSPStoreServiceImpl_FindAllSP(t *testing.T) {
-	spService := NewSPStoreServiceImpl(TestDb)
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
 	ctx := spService.BeginTransaction(context.Background(), true)
 	t.Run("page 0", func(t *testing.T) {
 		sp, count, err := spService.FindAllSP(ctx, 0, 5)
@@ -22,7 +22,7 @@ func TestSPStoreServiceImpl_FindAllSP(t *testing.T) {
 }
 
 func TestSPStoreServiceImpl_CreateSP(t *testing.T) {
-	spService := NewSPStoreServiceImpl(TestDb)
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
 	ctx := spService.BeginTransaction(context.Background(), true)
 	t.Run("create", func(t *testing.T) {
 		metadata := &models.ServiceProviderMetadata{
@@ -42,7 +42,7 @@ func TestSPStoreServiceImpl_CreateSP(t *testing.T) {
 }
 
 func TestSPStoreServiceImpl_ActivateSP(t *testing.T) {
-	spService := NewSPStoreServiceImpl(TestDb)
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
 	ctx := spService.BeginTransaction(context.Background(), true)
 	t.Run("activate", func(t *testing.T) {
 		err := spService.ActivateSP(ctx, TestSP.ID)
@@ -56,7 +56,7 @@ func TestSPStoreServiceImpl_ActivateSP(t *testing.T) {
 }
 
 func TestSPStoreServiceImpl_DeleteSP(t *testing.T) {
-	spService := NewSPStoreServiceImpl(TestDb)
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
 	ctx := spService.BeginTransaction(context.Background(), true)
 	t.Run("existing", func(t *testing.T) {
 		err := spService.DeleteSP(ctx, TestSP.ID)
@@ -70,7 +70,7 @@ func TestSPStoreServiceImpl_DeleteSP(t *testing.T) {
 }
 
 func TestSPStoreServiceImpl_FindSPByClientId(t *testing.T) {
-	spService := NewSPStoreServiceImpl(TestDb)
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
 	ctx := spService.BeginTransaction(context.Background(), true)
 	t.Run("existing", func(t *testing.T) {
 		sp, err := spService.FindSPByClientId(ctx, TestSP.ClientID)
@@ -84,4 +84,84 @@ func TestSPStoreServiceImpl_FindSPByClientId(t *testing.T) {
 		assert.Nil(t, sp)
 	})
 	spService.RollbackTransaction(ctx)
+}
+
+func TestSPStoreServiceImpl_FindSPByName(t *testing.T) {
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
+	ctx := spService.BeginTransaction(context.Background(), true)
+	t.Run("existing", func(t *testing.T) {
+		sp, err := spService.FindSPByName(ctx, TestSP.Name)
+		if assert.NoError(t, err) {
+			assert.Equal(t, TestSP.ID, sp.ID)
+		}
+	})
+	t.Run("wild card", func(t *testing.T) {
+		sp, err := spService.FindSPByName(ctx, "Test%")
+		if assert.NoError(t, err) {
+			assert.Equal(t, TestSP.ID, sp.ID)
+		}
+	})
+	t.Run("non existing", func(t *testing.T) {
+		sp, err := spService.FindSPByName(ctx, TestSP.Name+"20000")
+		assert.Error(t, err)
+		assert.Nil(t, sp)
+	})
+	spService.RollbackTransaction(ctx)
+}
+
+func TestSPStoreServiceImpl_PatchSP(t *testing.T) {
+	spService := NewSPStoreServiceImpl(TestDb, nil, nil)
+	ctx := spService.BeginTransaction(context.Background(), true)
+	t.Run("patch existing", func(t *testing.T) {
+		TestSP.Metadata.ApplicationType = "native"
+		err := spService.PatchSP(ctx, TestSP.ID, TestSP.Metadata)
+		if assert.NoError(t, err) {
+			sp, err := spService.GetSP(ctx, TestSP.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, "native", sp.Metadata.ApplicationType)
+			}
+		}
+		TestSP.Metadata.ApplicationType = "web"
+	})
+	t.Run("non existing", func(t *testing.T) {
+		TestSP.Metadata.ApplicationType = "native"
+		err := spService.PatchSP(ctx, TestSP.ID+2000, TestSP.Metadata)
+		assert.Error(t, err)
+		TestSP.Metadata.ApplicationType = "web"
+	})
+	spService.RollbackTransaction(ctx)
+}
+
+func TestSPStoreServiceImpl_ResetClientCredentials(t *testing.T) {
+	encDec := &TextEncryptDecryptMock{}
+	spService := NewSPStoreServiceImpl(TestDb, encDec, encDec)
+	ctx := spService.BeginTransaction(context.Background(), true)
+	t.Run("reset existing", func(t *testing.T) {
+		clientId, clientSecret, err := spService.ResetClientCredentials(ctx, TestSP.ID)
+		if assert.NoError(t, err) {
+			TestSP.ClientID = clientId
+			TestSP.ClientSecret = clientSecret
+			sp, err := spService.ValidateClientCredentials(ctx, clientId, clientSecret)
+			if assert.NoError(t, err) {
+				assert.Equal(t, TestSP.ID, sp)
+			}
+		}
+	})
+	t.Run("non existing", func(t *testing.T) {
+		sp, err := spService.ValidateClientCredentials(ctx, TestSP.ClientID, TestSP.ClientSecret+"111")
+		if assert.Error(t, err) {
+			assert.Equal(t, uint(0), sp)
+		}
+	})
+	spService.RollbackTransaction(ctx)
+}
+
+type TextEncryptDecryptMock struct{}
+
+func (m TextEncryptDecryptMock) DecryptText(_ context.Context, cypherText string) (text string, err error) {
+	return cypherText, nil
+}
+
+func (TextEncryptDecryptMock) EncryptText(_ context.Context, text string) (cypherText string, err error) {
+	return text, nil
 }

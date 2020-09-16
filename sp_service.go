@@ -117,12 +117,19 @@ func (S *SPStoreServiceImpl) ResetClientCredentials(ctx context.Context, id uint
 	if sp.Public {
 		return "", "", fmt.Errorf("service provider not private")
 	}
-	sp.ClientSecret = uuid.New().String()
+	encrypted, err := S.TextEnc.EncryptText(ctx, uuid.New().String())
+	if err != nil {
+		return "", "", err
+	}
+	sp.ClientSecret = encrypted
 	sp.ClientID = uuid.New().String()
 	db := getTransaction(ctx)
 	result := db.Model(&models.ServiceProviderModel{}).
 		Where("id = ?", id).
-		Update("client_id", sp.ClientID, "client_secret", sp.ClientSecret)
+		UpdateColumns(models.ServiceProviderModel{
+			ClientID:     sp.ClientID,
+			ClientSecret: sp.ClientSecret,
+		})
 	if result.Error != nil {
 		return "", "", result.Error
 	}
@@ -184,7 +191,7 @@ func (S *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId stri
 func (S *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error) {
 	tx := getTransaction(ctx)
 	sp = &models.ServiceProviderModel{}
-	result := tx.First(sp, "name = ?", name)
+	result := tx.First(sp, "name like ?", name)
 	if result.RecordNotFound() {
 		return nil, fmt.Errorf("no SP found with name %s", name)
 	}
@@ -204,6 +211,6 @@ func (S *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize 
 	return sps, total, nil
 }
 
-func NewSPStoreServiceImpl(db *gorm.DB) ISPStoreService {
-	return &SPStoreServiceImpl{Db: db}
+func NewSPStoreServiceImpl(db *gorm.DB, dec ITextDecrypts, enc ITextEncrypts) ISPStoreService {
+	return &SPStoreServiceImpl{Db: db, TextEnc: enc, TextDec: dec}
 }
