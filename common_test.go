@@ -16,7 +16,7 @@ var (
 	TestNoCredUser2 *models.UserModel
 	key             *otp.Key
 	TestSP          *models.ServiceProviderModel
-	TestSP2         *models.ServiceProviderModel
+	//TestSP2         *models.ServiceProviderModel
 )
 
 func init() {
@@ -26,7 +26,8 @@ func init() {
 		panic(err)
 	}
 	TestDb = TestDb.Debug()
-	TestDb.AutoMigrate(&models.UserModel{}, &models.UserCredentials{}, &models.ServiceProviderModel{}, &models.ScopeModel{}, &models.ClaimModel{})
+	TestDb.AutoMigrate(&models.UserModel{}, &models.UserCredentials{}, &models.TokensModel{},
+		&models.ServiceProviderModel{}, &models.ScopeModel{}, &models.ClaimModel{})
 	err = TestDb.Delete(&models.UserCredentials{}).Error
 	if err != nil {
 		panic(err)

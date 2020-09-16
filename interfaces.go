@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/identityOrg/cerberus-core/models"
 	"image"
+	"time"
 )
 
 type (
@@ -79,12 +80,27 @@ type (
 		FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error)
 		FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error)
 	}
-
 	ITextEncrypts interface {
 		EncryptText(ctx context.Context, text string) (cypherText string, err error)
 	}
 	ITextDecrypts interface {
 		DecryptText(ctx context.Context, cypherText string) (text string, err error)
+	}
+	ITokenStoreService interface {
+		StoreTokenProfile(ctx context.Context, reqId string, signatures ITokenSignatures, profile map[string]string) (err error)
+		GetProfileWithAuthCodeSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
+		GetProfileWithAccessTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
+		GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
+		InvalidateWithRequestID(ctx context.Context, reqID string, what uint8) (err error)
+	}
+	ITokenSignatures interface {
+		ITransactionalStore
+		GetACSignature() string
+		GetATSignature() string
+		GetRTSignature() string
+		GetACExpiry() time.Time
+		GetATExpiry() time.Time
+		GetRTExpiry() time.Time
 	}
 )
 
