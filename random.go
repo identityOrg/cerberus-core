@@ -22,8 +22,8 @@ func GenerateRandom(numberOnly bool, length uint8) (string, error) {
 	return string(bytes), nil
 }
 
-func GenerateRandomBytes(n uint8) ([]byte, error) {
-	b := make([]byte, n)
+func GenerateRandomBytes(length uint8) ([]byte, error) {
+	b := make([]byte, length)
 	_, err := rand.Read(b)
 	// Note that err == nil only if we read len(b) bytes.
 	if err != nil {

@@ -1,9 +1,8 @@
-package core
+package models
 
 import (
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
 	"os"
 	"testing"
@@ -23,22 +22,22 @@ func TestUserCredentials_Migrate(t *testing.T) {
 		t.Error(err)
 	}
 	db = db.Debug()
-	credential := models.UserCredentials{}
-	model := &models.UserModel{
+	credential := UserCredentials{}
+	model := &UserModel{
 		Username:     uuid.New().String(),
 		EmailAddress: uuid.New().String(),
-		Credentials:  []models.UserCredentials{credential},
+		Credentials:  []UserCredentials{credential},
 	}
 	println(db.AutoMigrate(model, &credential).Error)
 
 	db.Save(model)
 
-	model1 := &models.UserModel{}
+	model1 := &UserModel{}
 	db.Preload("Credentials").Find(model1, model.ID)
 
 	println(encoder.Encode(model1))
 
-	var creds []models.UserCredentials
+	var creds []UserCredentials
 	db.Model(model1).Association("Credentials").Find(&creds)
 	model1.Credentials = creds
 
@@ -90,7 +89,7 @@ func TestUserCredentials_IncrementInvalidAttempt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			uc := &models.UserCredentials{
+			uc := &UserCredentials{
 				FirstInvalidAttempt: tt.fields.FirstInvalidAttempt,
 				InvalidAttemptCount: tt.fields.InvalidAttemptCount,
 				Bocked:              tt.fields.Bocked,

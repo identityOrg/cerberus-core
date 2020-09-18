@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"

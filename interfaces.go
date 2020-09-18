@@ -86,15 +86,15 @@ type (
 	ITextDecrypts interface {
 		DecryptText(ctx context.Context, cypherText string) (text string, err error)
 	}
-	ITokenStoreService interface {
-		StoreTokenProfile(ctx context.Context, reqId string, signatures ITokenSignatures, profile map[string]string) (err error)
+	iTokenStoreService interface {
+		ITransactionalStore
+		StoreTokenProfile(ctx context.Context, reqId string, signatures iTokenSignatures, profile map[string]string) (err error)
 		GetProfileWithAuthCodeSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
 		GetProfileWithAccessTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
 		GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
 		InvalidateWithRequestID(ctx context.Context, reqID string, what uint8) (err error)
 	}
-	ITokenSignatures interface {
-		ITransactionalStore
+	iTokenSignatures interface {
 		GetACSignature() string
 		GetATSignature() string
 		GetRTSignature() string
