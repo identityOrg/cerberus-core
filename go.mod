@@ -3,11 +3,11 @@ module github.com/identityOrg/cerberus-core
 go 1.14
 
 require (
-	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/uuid v1.1.1
+	github.com/identityOrg/oidcsdk v0.7.1
 	github.com/jinzhu/gorm v1.9.15
 	github.com/pquerna/otp v1.2.0
-	github.com/stretchr/testify v1.3.0
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
+	github.com/stretchr/testify v1.6.1
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	gopkg.in/square/go-jose.v2 v2.5.1
 )

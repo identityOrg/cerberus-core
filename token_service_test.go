@@ -3,13 +3,14 @@ package core
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/identityOrg/oidcsdk"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestTokenStoreServiceImpl(t *testing.T) {
-	var tokenService iTokenStoreService = NewTokenStoreServiceImpl(TestDb)
+	var tokenService ITokenStoreService = NewTokenStoreServiceImpl(TestDb)
 	ctx := tokenService.BeginTransaction(context.Background(), true)
 	t.Run("ensure store", func(t *testing.T) {
 		signMock := NewTokenSignMock(time.Now().Add(time.Minute * 10))
@@ -43,7 +44,7 @@ func TestTokenStoreServiceImpl(t *testing.T) {
 				}
 			})
 			t.Run("invalidate AC", func(t *testing.T) {
-				err = tokenService.InvalidateWithRequestID(ctx, reqId, expireAuthorizationCode)
+				err = tokenService.InvalidateWithRequestID(ctx, reqId, oidcsdk.ExpireAuthorizationCode)
 				if assert.NoError(t, err) {
 					_, _, err := tokenService.GetProfileWithAuthCodeSign(ctx, signMock.GetACSignature())
 					if assert.Error(t, err) {

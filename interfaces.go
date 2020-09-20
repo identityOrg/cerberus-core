@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 	"github.com/identityOrg/cerberus-core/models"
+	"github.com/identityOrg/oidcsdk"
 	"image"
-	"time"
 )
 
 type (
@@ -14,7 +14,7 @@ type (
 		IUserChangeService
 		IUserCommonService
 		IUserOTPService
-		ITransactionalStore
+		oidcsdk.ITransactionalStore
 	}
 	IUserQueryService interface {
 		GetUser(ctx context.Context, id uint) (user *models.UserModel, err error)
@@ -46,17 +46,12 @@ type (
 		GenerateUserOTP(ctx context.Context, id uint, length uint8) (code string, err error)
 		ValidateOTP(ctx context.Context, id uint, code string) (err error)
 	}
-	ITransactionalStore interface {
-		BeginTransaction(ctx context.Context, readOnly bool) context.Context
-		CommitTransaction(ctx context.Context) context.Context
-		RollbackTransaction(ctx context.Context) context.Context
-	}
 	ISPStoreService interface {
 		ISPCommonService
 		ISPUpdateService
 		ISPCredentialService
 		ISPQueryService
-		ITransactionalStore
+		oidcsdk.ITransactionalStore
 	}
 	ISPCommonService interface {
 		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)
@@ -86,21 +81,9 @@ type (
 	ITextDecrypts interface {
 		DecryptText(ctx context.Context, cypherText string) (text string, err error)
 	}
-	iTokenStoreService interface {
-		ITransactionalStore
-		StoreTokenProfile(ctx context.Context, reqId string, signatures iTokenSignatures, profile map[string]string) (err error)
-		GetProfileWithAuthCodeSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
-		GetProfileWithAccessTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
-		GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error)
-		InvalidateWithRequestID(ctx context.Context, reqID string, what uint8) (err error)
-	}
-	iTokenSignatures interface {
-		GetACSignature() string
-		GetATSignature() string
-		GetRTSignature() string
-		GetACExpiry() time.Time
-		GetATExpiry() time.Time
-		GetRTExpiry() time.Time
+	ITokenStoreService interface {
+		oidcsdk.ITransactionalStore
+		oidcsdk.ITokenStore
 	}
 )
 

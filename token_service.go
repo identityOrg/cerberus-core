@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
+	"github.com/identityOrg/oidcsdk"
 	"github.com/jinzhu/gorm"
 	"time"
 )
@@ -28,7 +29,7 @@ func (ts *TokenStoreServiceImpl) RollbackTransaction(ctx context.Context) contex
 	return rollbackTransaction(ctx)
 }
 
-func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId string, signatures iTokenSignatures, profile map[string]string) (err error) {
+func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId string, signatures oidcsdk.ITokenSignatures, profile oidcsdk.RequestProfile) (err error) {
 	txn := getTransaction(ctx)
 	token := &models.TokensModel{
 		RequestID:      reqId,
@@ -48,7 +49,7 @@ func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId st
 	}
 }
 
-func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error) {
+func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
 	txn := getTransaction(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "ac_signature = ?", signature)
@@ -64,7 +65,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context,
 	return token.RequestProfile.Attributes, token.RequestID, nil
 }
 
-func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error) {
+func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
 	txn := getTransaction(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "at_signature = ?", signature)
@@ -80,7 +81,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Conte
 	return token.RequestProfile.Attributes, token.RequestID, nil
 }
 
-func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (profile map[string]string, reqId string, err error) {
+func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
 	txn := getTransaction(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "rt_signature = ?", signature)
@@ -104,21 +105,15 @@ func (ts *TokenStoreServiceImpl) InvalidateWithRequestID(ctx context.Context, re
 		return result.Error
 	}
 	if token.RequestID != "" {
-		if what&expireRefreshToken > 0 {
+		if what&oidcsdk.ExpireRefreshToken > 0 {
 			token.RTExpiry = time.Now().Add(-10)
 		}
-		if what&expireAccessToken > 0 {
+		if what&oidcsdk.ExpireAccessToken > 0 {
 			token.ATExpiry = time.Now().Add(-10)
 		}
-		if what&expireAuthorizationCode > 0 {
+		if what&oidcsdk.ExpireAuthorizationCode > 0 {
 			token.ACExpiry = time.Now().Add(-10)
 		}
 	}
 	return txn.Save(token).Error
 }
-
-const (
-	expireAuthorizationCode = 1
-	expireAccessToken       = 2
-	expireRefreshToken      = 4
-)
