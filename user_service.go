@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
+	"github.com/identityOrg/oidcsdk"
 	"github.com/jinzhu/gorm"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -417,4 +418,28 @@ func (u *UserStoreServiceImpl) ValidateOTP(ctx context.Context, id uint, code st
 		return findResult.Error
 	}
 	return db.Delete(otp).Error
+}
+
+func (u *UserStoreServiceImpl) Authenticate(ctx context.Context, username string, credential []byte) (err error) {
+	user, err := u.FindUserByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	return u.ValidatePassword(ctx, user.ID, string(credential))
+}
+
+func (u *UserStoreServiceImpl) GetClaims(ctx context.Context, username string, scopes oidcsdk.Arguments, claimsIDs []string) (map[string]interface{}, error) {
+	panic("implement me")
+}
+
+func (u *UserStoreServiceImpl) IsConsentRequired(ctx context.Context, username string, clientId string, scopes oidcsdk.Arguments) bool {
+	panic("implement me")
+}
+
+func (u *UserStoreServiceImpl) StoreConsent(ctx context.Context, username string, clientId string, scopes oidcsdk.Arguments) error {
+	panic("implement me")
+}
+
+func (u *UserStoreServiceImpl) FetchUserProfile(ctx context.Context, username string) oidcsdk.RequestProfile {
+	panic("implement me")
 }

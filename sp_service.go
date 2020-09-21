@@ -38,10 +38,7 @@ func (S *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, de
 	}
 	db := getTransaction(ctx)
 	saveResult := db.Save(user)
-	if saveResult.Error != nil {
-		return 0, saveResult.Error
-	}
-	return user.ID, nil
+	return user.ID, saveResult.Error
 }
 
 func (S *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {

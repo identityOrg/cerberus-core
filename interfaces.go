@@ -85,6 +85,29 @@ type (
 		oidcsdk.ITransactionalStore
 		oidcsdk.ITokenStore
 	}
+	IScopeClaimStoreService interface {
+		oidcsdk.ITransactionalStore
+		IScopeOperations
+		IClaimOperations
+	}
+	IClaimOperations interface {
+		CreateClaim(ctx context.Context, name string, description string) (id uint, err error)
+		FindClaimByName(ctx context.Context, name string) (*models.ClaimModel, error)
+		GetClaim(ctx context.Context, id uint) (*models.ClaimModel, error)
+		GetAllClaims(ctx context.Context, page uint, pageSize uint) ([]*models.ClaimModel, uint, error)
+		UpdateClaim(ctx context.Context, id uint, description string) error
+		DeleteClaim(ctx context.Context, id uint) error
+	}
+	IScopeOperations interface {
+		CreateScope(ctx context.Context, name string, description string) (id uint, err error)
+		FindScopeByName(ctx context.Context, name string) (*models.ScopeModel, error)
+		GetScope(ctx context.Context, id uint) (*models.ScopeModel, error)
+		GetAllScopes(ctx context.Context, page uint, pageSize uint) ([]*models.ScopeModel, uint, error)
+		UpdateScope(ctx context.Context, id uint, description string) error
+		DeleteScope(ctx context.Context, id uint) error
+		AddClaimToScope(ctx context.Context, scopeId uint, claimId uint) error
+		RemoveClaimFromScope(ctx context.Context, scopeId uint, claimId uint) error
+	}
 )
 
 const (
