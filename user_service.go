@@ -21,7 +21,7 @@ type UserStoreServiceImpl struct {
 	TOTPSecretLength         uint
 }
 
-func NewUserStoreService(db *gorm.DB, maxAttempt uint, window time.Duration) IUserStoreService {
+func NewUserStoreServiceImpl(db *gorm.DB, maxAttempt uint, window time.Duration) *UserStoreServiceImpl {
 	return &UserStoreServiceImpl{
 		Db:                       db,
 		MaxAllowedInvalidAttempt: maxAttempt,
@@ -429,17 +429,65 @@ func (u *UserStoreServiceImpl) Authenticate(ctx context.Context, username string
 }
 
 func (u *UserStoreServiceImpl) GetClaims(ctx context.Context, username string, scopes oidcsdk.Arguments, claimsIDs []string) (map[string]interface{}, error) {
-	panic("implement me")
+	db := getTransaction(ctx)
+
+	openid := &models.ScopeModel{
+		Name:        "openid",
+		Description: "Open id scope",
+	}
+	userNClaim := &models.ClaimModel{
+		Name:        "username",
+		Description: "User Name",
+	}
+	db.Save(openid).Association("Claims").Append(userNClaim)
+
+	user := &models.UserModel{}
+	findUser := db.Find(user, "username = ?", username)
+	if findUser.Error != nil {
+		return nil, findUser.Error
+	}
+	m := *user.Metadata
+
+	responseMap := make(map[string]interface{})
+	for _, scope := range scopes {
+		sc := &models.ScopeModel{}
+		result := db.Find(sc, "name = ?", scope)
+		if result.RecordNotFound() {
+			continue
+		} else if result.Error != nil {
+			return nil, result.Error
+		}
+		var claims []models.ClaimModel
+		assResult := result.Association("Claims").Find(&claims)
+		if assResult.Error != nil {
+			continue
+		}
+		for _, cl := range claims {
+			if v, ok := m[cl.Name]; ok {
+				responseMap[cl.Name] = v
+			}
+		}
+	}
+	for _, ci := range claimsIDs {
+		if v, ok := m[ci]; ok {
+			responseMap[ci] = v
+		}
+	}
+
+	return responseMap, nil
 }
 
-func (u *UserStoreServiceImpl) IsConsentRequired(ctx context.Context, username string, clientId string, scopes oidcsdk.Arguments) bool {
-	panic("implement me")
+func (u *UserStoreServiceImpl) IsConsentRequired(context.Context, string, string, oidcsdk.Arguments) bool {
+	return false
 }
 
-func (u *UserStoreServiceImpl) StoreConsent(ctx context.Context, username string, clientId string, scopes oidcsdk.Arguments) error {
-	panic("implement me")
+func (u *UserStoreServiceImpl) StoreConsent(context.Context, string, string, oidcsdk.Arguments) error {
+	return nil
 }
 
-func (u *UserStoreServiceImpl) FetchUserProfile(ctx context.Context, username string) oidcsdk.RequestProfile {
-	panic("implement me")
+func (u *UserStoreServiceImpl) FetchUserProfile(_ context.Context, username string) oidcsdk.RequestProfile {
+	profile := oidcsdk.RequestProfile{}
+	profile.SetUsername(username)
+	profile.SetDomain("demo.com")
+	return profile
 }

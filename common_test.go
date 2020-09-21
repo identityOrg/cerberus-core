@@ -37,6 +37,10 @@ func init() {
 	createNoCredUser()
 	createNoCredUser2()
 	createTestSP()
+	err = InitializeDefaultScope(TestDb)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func createTestSP() {
@@ -61,13 +65,13 @@ func createTestSP() {
 }
 
 func createNoCredUser2() {
+	metadata := &models.UserMetadata{}
+	metadata.SetName("No Cred2")
 	TestNoCredUser2 = &models.UserModel{
 		Username:     "nocred2",
 		EmailAddress: "nocred2@domain.com",
-		Metadata: &models.UserMetadata{
-			Name: "No Cred2",
-		},
-		Inactive: false,
+		Metadata:     metadata,
+		Inactive:     false,
 	}
 	TestNoCredUser2.ID = 3
 	err := TestDb.Save(TestNoCredUser2).Error
@@ -77,13 +81,13 @@ func createNoCredUser2() {
 }
 
 func createNoCredUser() {
+	metadata := &models.UserMetadata{}
+	metadata.SetName("No Cred")
 	TestNoCredUser = &models.UserModel{
 		Username:     "nocred",
 		EmailAddress: "nocred@domain.com",
-		Metadata: &models.UserMetadata{
-			Name: "No Cred",
-		},
-		Inactive: false,
+		Metadata:     metadata,
+		Inactive:     false,
 	}
 	TestNoCredUser.ID = 2
 	err := TestDb.Save(TestNoCredUser).Error
@@ -101,12 +105,12 @@ func createTestUser() {
 		Issuer:      "https://localhost:8080",
 		AccountName: "user",
 	})
+	metadata := &models.UserMetadata{}
+	metadata.SetName("Name Name")
 	TestUser = &models.UserModel{
 		Username:     "user",
 		EmailAddress: "user@domain.com",
-		Metadata: &models.UserMetadata{
-			Name: "Name Name",
-		},
+		Metadata:     metadata,
 		Credentials: []models.UserCredentials{
 			{
 				Type:   CredTypePassword,
