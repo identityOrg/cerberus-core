@@ -10,7 +10,7 @@ import (
 func TestScopeClaimStoreServiceImpl_Combined(t *testing.T) {
 	scopeClaimStore := NewScopeClaimStoreServiceImpl(TestDb)
 	ctx := context.Background()
-	ctx = scopeClaimStore.BeginTransaction(ctx, true)
+	scopeClaimStore.Db = beginTransaction(ctx, scopeClaimStore.Db)
 	var scopeId, claimId uint
 	var err error
 	var scope *models.ScopeModel
@@ -47,5 +47,5 @@ func TestScopeClaimStoreServiceImpl_Combined(t *testing.T) {
 			}
 		}
 	})
-	scopeClaimStore.RollbackTransaction(ctx)
+	rollbackTransaction(scopeClaimStore.Db)
 }

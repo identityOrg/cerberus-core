@@ -16,19 +16,7 @@ type SPStoreServiceImpl struct {
 	TextDec ITextDecrypts
 }
 
-func (S *SPStoreServiceImpl) BeginTransaction(ctx context.Context, readOnly bool) context.Context {
-	return beginTransaction(ctx, readOnly, S.Db)
-}
-
-func (S *SPStoreServiceImpl) CommitTransaction(ctx context.Context) context.Context {
-	return commitTransaction(ctx)
-}
-
-func (S *SPStoreServiceImpl) RollbackTransaction(ctx context.Context) context.Context {
-	return rollbackTransaction(ctx)
-}
-
-func (S *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error) {
+func (s *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error) {
 	user := &models.ServiceProviderModel{
 		Name:        clientName,
 		Description: description,
@@ -36,15 +24,15 @@ func (S *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, de
 		Public:      true,
 		Active:      true,
 	}
-	db := getTransaction(ctx)
+	db := s.Db
 	saveResult := db.Save(user)
 	return user.ID, saveResult.Error
 }
 
-func (S *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
+func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("service provider not found")
@@ -56,10 +44,10 @@ func (S *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *mo
 	return db.Save(user).Error
 }
 
-func (S *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
+func (s *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	findResult := db.Find(user)
 	if findResult.RecordNotFound() {
 		return errors.New("service provider not found")
@@ -78,25 +66,25 @@ func (S *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *mod
 	return db.Save(user).Error
 }
 
-func (S *SPStoreServiceImpl) DeleteSP(ctx context.Context, id uint) (err error) {
+func (s *SPStoreServiceImpl) DeleteSP(ctx context.Context, id uint) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	return db.Delete(user).Error
 }
 
-func (S *SPStoreServiceImpl) ActivateSP(ctx context.Context, id uint) error {
-	return S.updateStatus(ctx, id, true)
+func (s *SPStoreServiceImpl) ActivateSP(ctx context.Context, id uint) error {
+	return s.updateStatus(ctx, id, true)
 }
 
-func (S *SPStoreServiceImpl) DeactivateSP(ctx context.Context, id uint) error {
-	return S.updateStatus(ctx, id, false)
+func (s *SPStoreServiceImpl) DeactivateSP(ctx context.Context, id uint) error {
+	return s.updateStatus(ctx, id, false)
 }
 
-func (S *SPStoreServiceImpl) updateStatus(ctx context.Context, id uint, active bool) error {
+func (s *SPStoreServiceImpl) updateStatus(ctx context.Context, id uint, active bool) error {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	updateResult := db.Model(user).Update("active", active)
 	if updateResult.Error != nil {
 		return updateResult.Error
@@ -106,21 +94,21 @@ func (S *SPStoreServiceImpl) updateStatus(ctx context.Context, id uint, active b
 	return nil
 }
 
-func (S *SPStoreServiceImpl) ResetClientCredentials(ctx context.Context, id uint) (clientId, clientSecret string, err error) {
-	sp, err := S.GetSP(ctx, id)
+func (s *SPStoreServiceImpl) ResetClientCredentials(ctx context.Context, id uint) (clientId, clientSecret string, err error) {
+	sp, err := s.GetSP(ctx, id)
 	if err != nil {
 		return "", "", err
 	}
 	if sp.Public {
 		return "", "", fmt.Errorf("service provider not private")
 	}
-	encrypted, err := S.TextEnc.EncryptText(ctx, uuid.New().String())
+	encrypted, err := s.TextEnc.EncryptText(ctx, uuid.New().String())
 	if err != nil {
 		return "", "", err
 	}
 	sp.ClientSecret = encrypted
 	sp.ClientID = uuid.New().String()
-	db := getTransaction(ctx)
+	db := s.Db
 	result := db.Model(&models.ServiceProviderModel{}).
 		Where("id = ?", id).
 		UpdateColumns(models.ServiceProviderModel{
@@ -133,8 +121,8 @@ func (S *SPStoreServiceImpl) ResetClientCredentials(ctx context.Context, id uint
 	return sp.ClientID, sp.ClientSecret, nil
 }
 
-func (S *SPStoreServiceImpl) ValidateClientCredentials(ctx context.Context, clientId, clientSecret string) (id uint, err error) {
-	sp, err := S.FindSPByClientId(ctx, clientId)
+func (s *SPStoreServiceImpl) ValidateClientCredentials(ctx context.Context, clientId, clientSecret string) (id uint, err error) {
+	sp, err := s.FindSPByClientId(ctx, clientId)
 	if err != nil {
 		return 0, err
 	}
@@ -144,7 +132,7 @@ func (S *SPStoreServiceImpl) ValidateClientCredentials(ctx context.Context, clie
 	if sp.Public {
 		return sp.ID, nil
 	}
-	decryptedSecret, err := S.TextDec.DecryptText(ctx, sp.ClientSecret)
+	decryptedSecret, err := s.TextDec.DecryptText(ctx, sp.ClientSecret)
 	if err != nil {
 		return 0, fmt.Errorf("failed to decrypt sp secret - %v", err)
 	}
@@ -155,16 +143,16 @@ func (S *SPStoreServiceImpl) ValidateClientCredentials(ctx context.Context, clie
 	return 0, fmt.Errorf("invalid client secret")
 }
 
-func (S *SPStoreServiceImpl) ValidateSecretSignature(ctx context.Context, token string) (id uint, err error) {
+func (s *SPStoreServiceImpl) ValidateSecretSignature(ctx context.Context, token string) (id uint, err error) {
 	panic("implement me")
 }
 
-func (S *SPStoreServiceImpl) ValidatePrivateKeySignature(ctx context.Context, token string) (id uint, err error) {
+func (s *SPStoreServiceImpl) ValidatePrivateKeySignature(ctx context.Context, token string) (id uint, err error) {
 	panic("implement me")
 }
 
-func (S *SPStoreServiceImpl) GetSP(ctx context.Context, id uint) (sp *models.ServiceProviderModel, err error) {
-	tx := getTransaction(ctx)
+func (s *SPStoreServiceImpl) GetSP(ctx context.Context, id uint) (sp *models.ServiceProviderModel, err error) {
+	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, id)
 	if result.RecordNotFound() {
@@ -174,8 +162,8 @@ func (S *SPStoreServiceImpl) GetSP(ctx context.Context, id uint) (sp *models.Ser
 	return
 }
 
-func (S *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId string) (sp *models.ServiceProviderModel, err error) {
-	tx := getTransaction(ctx)
+func (s *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId string) (sp *models.ServiceProviderModel, err error) {
+	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, "client_id = ?", clientId)
 	if result.RecordNotFound() {
@@ -185,8 +173,8 @@ func (S *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId stri
 	return
 }
 
-func (S *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error) {
-	tx := getTransaction(ctx)
+func (s *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error) {
+	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.First(sp, "name like ?", name)
 	if result.RecordNotFound() {
@@ -196,9 +184,9 @@ func (S *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp 
 	return
 }
 
-func (S *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error) {
+func (s *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error) {
 	var total uint
-	tx := getTransaction(ctx)
+	tx := s.Db
 	query := tx.Select([]string{"id", "name", "description", "client_id", "active"}).Model(&models.ServiceProviderModel{})
 	err = query.Limit(pageSize).Offset(pageSize * page).Find(&sps).Error
 	if err != nil {

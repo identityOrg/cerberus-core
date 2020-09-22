@@ -8,7 +8,8 @@ import (
 
 func TestNewSecretStoreServiceImpl(t *testing.T) {
 	secretService := NewSecretStoreServiceImpl(TestDb)
-	ctx := secretService.BeginTransaction(context.Background(), true)
+	ctx := context.Background()
+	secretService.Db = beginTransaction(context.Background(), secretService.Db)
 	var channelId uint
 	var err error
 	t.Run("create channel", func(t *testing.T) {
@@ -39,5 +40,5 @@ func TestNewSecretStoreServiceImpl(t *testing.T) {
 			}
 		}
 	})
-	secretService.RollbackTransaction(ctx)
+	rollbackTransaction(secretService.Db)
 }

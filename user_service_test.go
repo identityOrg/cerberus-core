@@ -56,7 +56,7 @@ func TestRerenderPng(t *testing.T) {
 func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("de-activate", func(t *testing.T) {
 		err := userStoreService.DeactivateUser(ctx, TestUser.ID)
 		assert.NoError(t, err)
@@ -71,25 +71,25 @@ func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
 			assert.NotNil(t, err)
 		}
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	allUser, count, err := userStoreService.FindAllUser(ctx, 0, 5)
 	assert.Nil(t, err)
 	if assert.Equal(t, uint(3), count) {
 		assert.Equal(t, uint(1), allUser[0].ID)
 	}
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("valid", func(t *testing.T) {
 		err := userStoreService.ValidatePassword(ctx, 1, "password")
 		assert.Nil(t, err)
@@ -108,13 +108,13 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 			assert.EqualError(t, err, "credential not found")
 		}
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByEmail(ctx, TestUser.EmailAddress)
 		assert.NoError(t, err)
@@ -125,13 +125,13 @@ func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, foundUser)
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByUsername(ctx, TestUser.Username)
 		assert.NoError(t, err)
@@ -142,13 +142,13 @@ func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, foundUser)
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("valid", func(t *testing.T) {
 		code, err := totp.GenerateCode(TestUser.Credentials[1].Value, time.Now())
 		if assert.NoError(t, err) {
@@ -164,13 +164,13 @@ func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
 		err := userStoreService.ValidateTOTP(ctx, 2000, "code")
 		assert.Error(t, err)
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		err := userStoreService.SetPassword(ctx, TestNoCredUser.ID, "new password")
 		assert.NoError(t, err)
@@ -179,13 +179,13 @@ func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 		err := userStoreService.SetPassword(ctx, 2000, "new password")
 		assert.Error(t, err)
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		image, secret, err := userStoreService.GenerateTOTP(ctx, TestNoCredUser.ID, "cerberus")
 		if assert.NoError(t, err) {
@@ -201,13 +201,13 @@ func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 			assert.Equal(t, "", secret)
 		}
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("blocked", func(t *testing.T) {
 		err := userStoreService.SetPassword(ctx, TestUser.ID, "other password")
 		if assert.NoError(t, err) {
@@ -235,13 +235,13 @@ func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_GetUser(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		user, err := userStoreService.GetUser(ctx, TestUser.ID)
 		if assert.NoError(t, err) {
@@ -257,13 +257,13 @@ func TestUserStoreServiceImpl_GetUser(t *testing.T) {
 			assert.EqualError(t, err, "user not found")
 		}
 	})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }
 
 func TestUserStoreServiceImpl_GetClaims(t *testing.T) {
 	ctx := context.Background()
 	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
-	ctx = userStoreService.BeginTransaction(ctx, true)
+	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	_, _ = userStoreService.GetClaims(ctx, "us", []string{"openid"}, []string{})
-	userStoreService.RollbackTransaction(ctx)
+	rollbackTransaction(userStoreService.Db)
 }

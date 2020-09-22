@@ -17,20 +17,8 @@ func NewTokenStoreServiceImpl(db *gorm.DB) *TokenStoreServiceImpl {
 	return &TokenStoreServiceImpl{Db: db}
 }
 
-func (ts *TokenStoreServiceImpl) BeginTransaction(ctx context.Context, readOnly bool) context.Context {
-	return beginTransaction(ctx, readOnly, ts.Db)
-}
-
-func (ts *TokenStoreServiceImpl) CommitTransaction(ctx context.Context) context.Context {
-	return commitTransaction(ctx)
-}
-
-func (ts *TokenStoreServiceImpl) RollbackTransaction(ctx context.Context) context.Context {
-	return rollbackTransaction(ctx)
-}
-
 func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId string, signatures oidcsdk.ITokenSignatures, profile oidcsdk.RequestProfile) (err error) {
-	txn := getTransaction(ctx)
+	txn := ts.Db
 	token := &models.TokensModel{
 		RequestID:      reqId,
 		ACSignature:    signatures.GetACSignature(),
@@ -50,7 +38,7 @@ func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId st
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := getTransaction(ctx)
+	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "ac_signature = ?", signature)
 	if result.RecordNotFound() {
@@ -66,7 +54,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context,
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := getTransaction(ctx)
+	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "at_signature = ?", signature)
 	if result.RecordNotFound() {
@@ -82,7 +70,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Conte
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := getTransaction(ctx)
+	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "rt_signature = ?", signature)
 	if result.RecordNotFound() {
@@ -98,7 +86,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Cont
 }
 
 func (ts *TokenStoreServiceImpl) InvalidateWithRequestID(ctx context.Context, reqID string, what uint8) (err error) {
-	txn := getTransaction(ctx)
+	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "request_id = ?", reqID)
 	if result.Error != nil {

@@ -11,7 +11,8 @@ import (
 
 func TestTokenStoreServiceImpl(t *testing.T) {
 	var tokenService = NewTokenStoreServiceImpl(TestDb)
-	ctx := tokenService.BeginTransaction(context.Background(), true)
+	tokenService.Db = beginTransaction(context.Background(), tokenService.Db)
+	ctx := context.Background()
 	t.Run("ensure store", func(t *testing.T) {
 		signMock := NewTokenSignMock(time.Now().Add(time.Minute * 10))
 		profile := make(map[string]string)
@@ -77,7 +78,7 @@ func TestTokenStoreServiceImpl(t *testing.T) {
 			})
 		}
 	})
-	tokenService.RollbackTransaction(ctx)
+	rollbackTransaction(tokenService.Db)
 }
 
 type TokenSignMock struct {

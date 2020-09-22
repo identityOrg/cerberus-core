@@ -16,30 +16,18 @@ func NewScopeClaimStoreServiceImpl(db *gorm.DB) *ScopeClaimStoreServiceImpl {
 	return &ScopeClaimStoreServiceImpl{Db: db}
 }
 
-func (s *ScopeClaimStoreServiceImpl) BeginTransaction(ctx context.Context, readOnly bool) context.Context {
-	return beginTransaction(ctx, readOnly, s.Db)
-}
-
-func (s *ScopeClaimStoreServiceImpl) CommitTransaction(ctx context.Context) context.Context {
-	return commitTransaction(ctx)
-}
-
-func (s *ScopeClaimStoreServiceImpl) RollbackTransaction(ctx context.Context) context.Context {
-	return rollbackTransaction(ctx)
-}
-
 func (s *ScopeClaimStoreServiceImpl) CreateScope(ctx context.Context, name string, description string) (id uint, err error) {
 	scope := &models.ScopeModel{
 		Name:        name,
 		Description: description,
 	}
-	db := getTransaction(ctx)
+	db := s.Db
 	saveResult := db.Save(scope)
 	return scope.ID, saveResult.Error
 }
 
 func (s *ScopeClaimStoreServiceImpl) FindScopeByName(ctx context.Context, name string) (*models.ScopeModel, error) {
-	tx := getTransaction(ctx)
+	tx := s.Db
 	scope := &models.ScopeModel{}
 	result := tx.First(scope, "name like ?", name)
 	if result.RecordNotFound() {
@@ -49,7 +37,7 @@ func (s *ScopeClaimStoreServiceImpl) FindScopeByName(ctx context.Context, name s
 }
 
 func (s *ScopeClaimStoreServiceImpl) GetScope(ctx context.Context, id uint) (*models.ScopeModel, error) {
-	tx := getTransaction(ctx)
+	tx := s.Db
 	scope := &models.ScopeModel{}
 	result := tx.Find(scope, id)
 	if result.RecordNotFound() {
@@ -60,7 +48,7 @@ func (s *ScopeClaimStoreServiceImpl) GetScope(ctx context.Context, id uint) (*mo
 
 func (s *ScopeClaimStoreServiceImpl) GetAllScopes(ctx context.Context, page uint, pageSize uint) ([]*models.ScopeModel, uint, error) {
 	var total uint
-	tx := getTransaction(ctx)
+	tx := s.Db
 	scopes := make([]*models.ScopeModel, 0)
 	query := tx.Model(&models.ServiceProviderModel{})
 	err := query.Limit(pageSize).Offset(pageSize * page).Find(&scopes).Error
@@ -74,7 +62,7 @@ func (s *ScopeClaimStoreServiceImpl) GetAllScopes(ctx context.Context, page uint
 func (s *ScopeClaimStoreServiceImpl) UpdateScope(ctx context.Context, id uint, description string) error {
 	scope := &models.ScopeModel{}
 	scope.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	findResult := db.Find(scope)
 	if findResult.RecordNotFound() {
 		return errors.New("scope not found")
@@ -89,12 +77,12 @@ func (s *ScopeClaimStoreServiceImpl) UpdateScope(ctx context.Context, id uint, d
 func (s *ScopeClaimStoreServiceImpl) DeleteScope(ctx context.Context, id uint) error {
 	scope := &models.ScopeModel{}
 	scope.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	return db.Delete(scope).Error
 }
 
 func (s *ScopeClaimStoreServiceImpl) AddClaimToScope(ctx context.Context, scopeId uint, claimId uint) error {
-	db := getTransaction(ctx)
+	db := s.Db
 	scope := &models.ScopeModel{}
 	scope.ID = scopeId
 	findResult := db.Find(scope)
@@ -121,7 +109,7 @@ func (s *ScopeClaimStoreServiceImpl) AddClaimToScope(ctx context.Context, scopeI
 }
 
 func (s *ScopeClaimStoreServiceImpl) RemoveClaimFromScope(ctx context.Context, scopeId uint, claimId uint) error {
-	db := getTransaction(ctx)
+	db := s.Db
 	scope := &models.ScopeModel{}
 	scope.ID = scopeId
 	findResult := db.Find(scope)
@@ -152,13 +140,13 @@ func (s *ScopeClaimStoreServiceImpl) CreateClaim(ctx context.Context, name strin
 		Name:        name,
 		Description: description,
 	}
-	db := getTransaction(ctx)
+	db := s.Db
 	saveResult := db.Save(claim)
 	return claim.ID, saveResult.Error
 }
 
 func (s *ScopeClaimStoreServiceImpl) FindClaimByName(ctx context.Context, name string) (*models.ClaimModel, error) {
-	tx := getTransaction(ctx)
+	tx := s.Db
 	claim := &models.ClaimModel{}
 	result := tx.First(claim, "name like ?", name)
 	if result.RecordNotFound() {
@@ -168,7 +156,7 @@ func (s *ScopeClaimStoreServiceImpl) FindClaimByName(ctx context.Context, name s
 }
 
 func (s *ScopeClaimStoreServiceImpl) GetClaim(ctx context.Context, id uint) (*models.ClaimModel, error) {
-	tx := getTransaction(ctx)
+	tx := s.Db
 	claim := &models.ClaimModel{}
 	result := tx.Find(claim, id)
 	if result.RecordNotFound() {
@@ -179,7 +167,7 @@ func (s *ScopeClaimStoreServiceImpl) GetClaim(ctx context.Context, id uint) (*mo
 
 func (s *ScopeClaimStoreServiceImpl) GetAllClaims(ctx context.Context, page uint, pageSize uint) ([]*models.ClaimModel, uint, error) {
 	var total uint
-	tx := getTransaction(ctx)
+	tx := s.Db
 	claims := make([]*models.ClaimModel, 0)
 	query := tx.Model(&models.ClaimModel{})
 	err := query.Limit(pageSize).Offset(pageSize * page).Find(&claims).Error
@@ -193,7 +181,7 @@ func (s *ScopeClaimStoreServiceImpl) GetAllClaims(ctx context.Context, page uint
 func (s *ScopeClaimStoreServiceImpl) UpdateClaim(ctx context.Context, id uint, description string) error {
 	claim := &models.ClaimModel{}
 	claim.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	findResult := db.Find(claim)
 	if findResult.RecordNotFound() {
 		return errors.New("claim not found")
@@ -208,6 +196,6 @@ func (s *ScopeClaimStoreServiceImpl) UpdateClaim(ctx context.Context, id uint, d
 func (s *ScopeClaimStoreServiceImpl) DeleteClaim(ctx context.Context, id uint) error {
 	claim := &models.ClaimModel{}
 	claim.ID = id
-	db := getTransaction(ctx)
+	db := s.Db
 	return db.Delete(claim).Error
 }
