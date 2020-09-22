@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"github.com/identityOrg/oidcsdk"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -18,6 +19,50 @@ type ServiceProviderModel struct {
 	Metadata     *ServiceProviderMetadata `sql:"column:metadata;type:lob" json:"metadata,omitempty"`
 }
 
+func (sp ServiceProviderModel) GetID() string {
+	return sp.ClientID
+}
+
+func (sp ServiceProviderModel) GetSecret() string {
+	return sp.ClientSecret
+}
+
+func (sp ServiceProviderModel) IsPublic() bool {
+	return sp.Public
+}
+
+func (sp ServiceProviderModel) GetIDTokenSigningAlg() jose.SignatureAlgorithm {
+	if sp.Metadata != nil {
+		return jose.SignatureAlgorithm(sp.Metadata.IdTokenSignedResponseAlg)
+	} else {
+		return ""
+	}
+}
+
+func (sp ServiceProviderModel) GetRedirectURIs() []string {
+	if sp.Metadata != nil {
+		return sp.Metadata.RedirectUris
+	} else {
+		return []string{}
+	}
+}
+
+func (sp ServiceProviderModel) GetApprovedScopes() oidcsdk.Arguments {
+	if sp.Metadata != nil {
+		return sp.Metadata.Scopes
+	} else {
+		return []string{}
+	}
+}
+
+func (sp ServiceProviderModel) GetApprovedGrantTypes() oidcsdk.Arguments {
+	if sp.Metadata != nil {
+		return sp.Metadata.GrantTypes
+	} else {
+		return []string{}
+	}
+}
+
 func (sp ServiceProviderModel) TableName() string {
 	return "t_sp"
 }
@@ -26,6 +71,7 @@ type ServiceProviderMetadata struct {
 	ClientName                   string                 `json:"client_name,omitempty"`
 	RedirectUris                 []string               `json:"redirect_uris,omitempty"`
 	ResponseTypes                []string               `json:"response_types,omitempty"`
+	Scopes                       []string               `json:"scopes,omitempty"`
 	GrantTypes                   []string               `json:"grant_types,omitempty"`
 	ApplicationType              string                 `json:"application_type,omitempty"`
 	Contacts                     []string               `json:"contacts,omitempty"`

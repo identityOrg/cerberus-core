@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/identityOrg/cerberus-core/models"
+	"github.com/identityOrg/oidcsdk"
 	"github.com/jinzhu/gorm"
 )
 
@@ -14,6 +15,16 @@ type SPStoreServiceImpl struct {
 	Db      *gorm.DB
 	TextEnc ITextEncrypts
 	TextDec ITextDecrypts
+}
+
+func (s *SPStoreServiceImpl) GetClient(ctx context.Context, clientID string) (client oidcsdk.IClient, err error) {
+	return s.FindSPByClientId(ctx, clientID)
+}
+
+func (s *SPStoreServiceImpl) FetchClientProfile(ctx context.Context, clientID string) oidcsdk.RequestProfile {
+	profile := oidcsdk.RequestProfile{}
+	profile.SetUsername(clientID)
+	return profile
 }
 
 func (s *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error) {

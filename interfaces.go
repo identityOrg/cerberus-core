@@ -14,6 +14,7 @@ type (
 		IUserChangeService
 		IUserCommonService
 		IUserOTPService
+		oidcsdk.IUserStore
 	}
 	IUserQueryService interface {
 		GetUser(ctx context.Context, id uint) (user *models.UserModel, err error)
@@ -50,6 +51,7 @@ type (
 		ISPUpdateService
 		ISPCredentialService
 		ISPQueryService
+		oidcsdk.IClientStore
 	}
 	ISPCommonService interface {
 		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)
