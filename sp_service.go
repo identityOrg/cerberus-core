@@ -208,6 +208,6 @@ func (S *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize 
 	return sps, total, nil
 }
 
-func NewSPStoreServiceImpl(db *gorm.DB, dec ITextDecrypts, enc ITextEncrypts) ISPStoreService {
+func NewSPStoreServiceImpl(db *gorm.DB, dec ITextDecrypts, enc ITextEncrypts) *SPStoreServiceImpl {
 	return &SPStoreServiceImpl{Db: db, TextEnc: enc, TextDec: dec}
 }

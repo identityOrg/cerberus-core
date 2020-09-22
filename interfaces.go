@@ -14,7 +14,6 @@ type (
 		IUserChangeService
 		IUserCommonService
 		IUserOTPService
-		oidcsdk.ITransactionalStore
 	}
 	IUserQueryService interface {
 		GetUser(ctx context.Context, id uint) (user *models.UserModel, err error)
@@ -51,7 +50,6 @@ type (
 		ISPUpdateService
 		ISPCredentialService
 		ISPQueryService
-		oidcsdk.ITransactionalStore
 	}
 	ISPCommonService interface {
 		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)
@@ -82,11 +80,9 @@ type (
 		DecryptText(ctx context.Context, cypherText string) (text string, err error)
 	}
 	ITokenStoreService interface {
-		oidcsdk.ITransactionalStore
 		oidcsdk.ITokenStore
 	}
 	IScopeClaimStoreService interface {
-		oidcsdk.ITransactionalStore
 		IScopeOperations
 		IClaimOperations
 	}
@@ -107,6 +103,17 @@ type (
 		DeleteScope(ctx context.Context, id uint) error
 		AddClaimToScope(ctx context.Context, scopeId uint, claimId uint) error
 		RemoveClaimFromScope(ctx context.Context, scopeId uint, claimId uint) error
+	}
+	ISecretStoreService interface {
+		oidcsdk.ISecretStore
+		ISecretChannelManager
+	}
+	ISecretChannelManager interface {
+		CreateChannel(ctx context.Context, name string, algorithm string, use string, validityDay uint) (uint, error)
+		GetAllChannels(ctx context.Context) ([]*models.SecretChannelModel, error)
+		GetChannel(ctx context.Context, channelId uint) (*models.SecretChannelModel, error)
+		DeleteChannel(ctx context.Context, channelId uint) error
+		RenewSecret(ctx context.Context, channelId uint) error
 	}
 )
 

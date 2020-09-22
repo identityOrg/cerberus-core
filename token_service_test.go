@@ -10,7 +10,7 @@ import (
 )
 
 func TestTokenStoreServiceImpl(t *testing.T) {
-	var tokenService ITokenStoreService = NewTokenStoreServiceImpl(TestDb)
+	var tokenService = NewTokenStoreServiceImpl(TestDb)
 	ctx := tokenService.BeginTransaction(context.Background(), true)
 	t.Run("ensure store", func(t *testing.T) {
 		signMock := NewTokenSignMock(time.Now().Add(time.Minute * 10))

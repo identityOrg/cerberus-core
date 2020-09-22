@@ -28,7 +28,8 @@ func init() {
 	}
 	TestDb = TestDb.Debug()
 	TestDb.AutoMigrate(&models.UserModel{}, &models.UserCredentials{}, &models.TokensModel{},
-		&models.ServiceProviderModel{}, &models.ScopeModel{}, &models.ClaimModel{})
+		&models.ServiceProviderModel{}, &models.ScopeModel{}, &models.ClaimModel{}, &models.SecretChannelModel{},
+		&models.SecretModel{})
 	err = TestDb.Delete(&models.UserCredentials{}).Error
 	if err != nil {
 		panic(err)

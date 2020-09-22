@@ -31,8 +31,8 @@ github.com/hashicorp/go-memdb v1.2.1/go.mod h1:OSvLJ662Jim8hMM+gWGyhktyWk2xPCnWM
 github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
-github.com/identityOrg/oidcsdk v0.7.1 h1:YTvckPBYlsApcRstBtD/zSkOj2aVaz3ngya5I1irqNo=
-github.com/identityOrg/oidcsdk v0.7.1/go.mod h1:GueDP441PjFtZBL+3ZyesQNDWtpUs+hEwS+fmIuMAgI=
+github.com/identityOrg/oidcsdk v0.7.2 h1:Pa2N4JU6o5kMHRdJ78pleRxddkFhY0DG2K+fEqHE0PI=
+github.com/identityOrg/oidcsdk v0.7.2/go.mod h1:GueDP441PjFtZBL+3ZyesQNDWtpUs+hEwS+fmIuMAgI=
 github.com/jinzhu/gorm v1.9.15 h1:OdR1qFvtXktlxk73XFYMiYn9ywzTwytqe4QkuMRqc38=
 github.com/jinzhu/gorm v1.9.15/go.mod h1:G3LB3wezTOWM2ITLzPxEXgSkOXAntiLHS7UdBefADcs=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
