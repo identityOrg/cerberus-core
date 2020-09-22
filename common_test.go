@@ -9,6 +9,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 	"os"
+	"strings"
 )
 
 var (
@@ -25,7 +26,9 @@ func init() {
 	var err error
 	err = os.Remove("test.db")
 	if err != nil {
-		panic(err)
+		if !strings.HasSuffix(err.Error(), "no such file or directory") {
+			panic(err)
+		}
 	}
 	TestDb, err = gorm.Open("sqlite3", "test.db")
 	if err != nil {
