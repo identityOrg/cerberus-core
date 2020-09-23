@@ -28,8 +28,8 @@ type (
 		SetWebsite(website string)
 		GetEmail() string
 		SetEmail(email string)
-		GetEmailVerified() string
-		SetEmailVerified(emailVerified string)
+		GetEmailVerified() bool
+		SetEmailVerified(emailVerified bool)
 		GetGender() string
 		SetGender(gender string)
 		GetBirthDate() string
@@ -40,8 +40,8 @@ type (
 		SetLocale(locale string)
 		GetPhoneNumber() string
 		SetPhoneNumber(phoneNumber string)
-		GetPhoneNumberVerified() string
-		SetPhoneNumberVerified(phoneNumberVerified string)
+		GetPhoneNumberVerified() bool
+		SetPhoneNumberVerified(phoneNumberVerified bool)
 		GetAddress() IAddress
 		SetAddress(address IAddress)
 		GetAttribute(name string) interface{}
@@ -216,11 +216,11 @@ func (u UserMetadata) SetEmail(email string) {
 	u["email"] = email
 }
 
-func (u UserMetadata) GetEmailVerified() string {
-	return extractStringAttribute(u, "email_verified")
+func (u UserMetadata) GetEmailVerified() bool {
+	return extractBoolAttribute(u, "email_verified")
 }
 
-func (u UserMetadata) SetEmailVerified(emailVerified string) {
+func (u UserMetadata) SetEmailVerified(emailVerified bool) {
 	u["email_verified"] = emailVerified
 }
 
@@ -264,11 +264,11 @@ func (u UserMetadata) SetPhoneNumber(phoneNumber string) {
 	u["phone_number"] = phoneNumber
 }
 
-func (u UserMetadata) GetPhoneNumberVerified() string {
-	return extractStringAttribute(u, "phone_number_verified")
+func (u UserMetadata) GetPhoneNumberVerified() bool {
+	return extractBoolAttribute(u, "phone_number_verified")
 }
 
-func (u UserMetadata) SetPhoneNumberVerified(phoneNumberVerified string) {
+func (u UserMetadata) SetPhoneNumberVerified(phoneNumberVerified bool) {
 	u["phone_number_verified"] = phoneNumberVerified
 }
 
@@ -297,5 +297,13 @@ func extractStringAttribute(u map[string]interface{}, key string) string {
 		return val
 	} else {
 		return ""
+	}
+}
+
+func extractBoolAttribute(u UserMetadata, key string) bool {
+	if val, ok := u[key].(bool); ok {
+		return val
+	} else {
+		return false
 	}
 }

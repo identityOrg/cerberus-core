@@ -55,7 +55,12 @@ func TestRerenderPng(t *testing.T) {
 
 func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("de-activate", func(t *testing.T) {
 		err := userStoreService.DeactivateUser(ctx, TestUser.ID)
@@ -76,7 +81,12 @@ func TestUserStoreServiceImpl_ActivateDeactivateUser(t *testing.T) {
 
 func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	allUser, count, err := userStoreService.FindAllUser(ctx, 0, 5)
 	assert.Nil(t, err)
@@ -88,7 +98,12 @@ func TestUserStoreServiceImpl_FindAllUser(t *testing.T) {
 
 func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("valid", func(t *testing.T) {
 		err := userStoreService.ValidatePassword(ctx, 1, "password")
@@ -113,7 +128,12 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 
 func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByEmail(ctx, TestUser.EmailAddress)
@@ -130,7 +150,12 @@ func TestUserStoreServiceImpl_FindUserByEmail(t *testing.T) {
 
 func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("found", func(t *testing.T) {
 		foundUser, err := userStoreService.FindUserByUsername(ctx, TestUser.Username)
@@ -147,7 +172,12 @@ func TestUserStoreServiceImpl_FindUserByUsername(t *testing.T) {
 
 func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("valid", func(t *testing.T) {
 		code, err := totp.GenerateCode(TestUser.Credentials[1].Value, time.Now())
@@ -169,7 +199,12 @@ func TestUserStoreServiceImpl_ValidateTOTP(t *testing.T) {
 
 func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		err := userStoreService.SetPassword(ctx, TestNoCredUser.ID, "new password")
@@ -184,7 +219,12 @@ func TestUserStoreServiceImpl_SetPassword(t *testing.T) {
 
 func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 3, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 3,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		image, secret, err := userStoreService.GenerateTOTP(ctx, TestNoCredUser.ID, "cerberus")
@@ -206,7 +246,12 @@ func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 
 func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 1,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("blocked", func(t *testing.T) {
 		err := userStoreService.SetPassword(ctx, TestUser.ID, "other password")
@@ -240,7 +285,12 @@ func TestUserStoreServiceImpl_Credential_Block_Unblock(t *testing.T) {
 
 func TestUserStoreServiceImpl_GetUser(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 1,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	t.Run("success", func(t *testing.T) {
 		user, err := userStoreService.GetUser(ctx, TestUser.ID)
@@ -262,7 +312,12 @@ func TestUserStoreServiceImpl_GetUser(t *testing.T) {
 
 func TestUserStoreServiceImpl_GetClaims(t *testing.T) {
 	ctx := context.Background()
-	userStoreService := NewUserStoreServiceImpl(TestDb, 1, 5*time.Minute)
+	config := &Config{
+		MaxInvalidLoginAttempt: 1,
+		InvalidAttemptWindow:   5 * time.Minute,
+		TOTPSecretLength:       6,
+	}
+	userStoreService := NewUserStoreServiceImpl(TestDb, config)
 	userStoreService.Db = beginTransaction(ctx, userStoreService.Db)
 	_, _ = userStoreService.GetClaims(ctx, "us", []string{"openid"}, []string{})
 	rollbackTransaction(userStoreService.Db)

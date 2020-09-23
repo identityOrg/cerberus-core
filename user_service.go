@@ -11,23 +11,15 @@ import (
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 	"image"
-	"time"
 )
 
 type UserStoreServiceImpl struct {
-	Db                       *gorm.DB
-	MaxAllowedInvalidAttempt uint
-	InvalidAttemptWindow     time.Duration
-	TOTPSecretLength         uint
+	Db     *gorm.DB
+	Config *Config
 }
 
-func NewUserStoreServiceImpl(db *gorm.DB, maxAttempt uint, window time.Duration) *UserStoreServiceImpl {
-	return &UserStoreServiceImpl{
-		Db:                       db,
-		MaxAllowedInvalidAttempt: maxAttempt,
-		InvalidAttemptWindow:     window,
-		TOTPSecretLength:         20,
-	}
+func NewUserStoreServiceImpl(db *gorm.DB, config *Config) *UserStoreServiceImpl {
+	return &UserStoreServiceImpl{Db: db, Config: config}
 }
 
 func (u *UserStoreServiceImpl) FindUserByUsername(ctx context.Context, username string) (*models.UserModel, error) {
@@ -118,7 +110,7 @@ func (u *UserStoreServiceImpl) ValidatePassword(ctx context.Context, id uint, pa
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(cred.Value), []byte(password))
 	if err != nil {
-		cred.IncrementInvalidAttempt(u.MaxAllowedInvalidAttempt, u.InvalidAttemptWindow)
+		cred.IncrementInvalidAttempt(u.Config.MaxInvalidLoginAttempt, u.Config.InvalidAttemptWindow)
 		db.Save(cred)
 		return errors.New("password mismatch")
 	}
@@ -147,7 +139,7 @@ func (u *UserStoreServiceImpl) GenerateTOTP(ctx context.Context, id uint, issuer
 	opt := totp.GenerateOpts{
 		Issuer:      issuer,
 		AccountName: user.Username,
-		SecretSize:  u.TOTPSecretLength,
+		SecretSize:  u.Config.TOTPSecretLength,
 	}
 	key, err := totp.Generate(opt)
 	if err != nil {
@@ -192,7 +184,7 @@ func (u *UserStoreServiceImpl) ValidateTOTP(ctx context.Context, id uint, code s
 	}
 	valid := totp.Validate(code, cred.Value)
 	if !valid {
-		cred.IncrementInvalidAttempt(u.MaxAllowedInvalidAttempt, u.InvalidAttemptWindow)
+		cred.IncrementInvalidAttempt(u.Config.MaxInvalidLoginAttempt, u.Config.InvalidAttemptWindow)
 		db.Save(cred)
 		err = errors.New("totp validation failed")
 		return err
