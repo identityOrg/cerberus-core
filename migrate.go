@@ -96,7 +96,12 @@ func MigrateDB(ormDB *gorm.DB, force bool, demo bool) error {
 		metadata.SetName("Demo User")
 		metadata.SetEmail("user@demo.com")
 		metadata.SetEmailVerified(true)
-		_, err = userService.CreateUser(context.Background(), "user", "user@demo.com", metadata)
+		ctx := context.Background()
+		uid, err := userService.CreateUser(ctx, "user", "user@demo.com", metadata)
+		if err != nil {
+			return err
+		}
+		err = userService.SetPassword(ctx, uid, "user")
 		if err != nil {
 			return err
 		}
