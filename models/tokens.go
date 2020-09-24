@@ -11,9 +11,9 @@ type (
 	TokensModel struct {
 		BaseModel
 		RequestID      string        `sql:"column:request_id;not null" json:"request_id,omitempty"`
-		ACSignature    string        `sql:"column:ac_signature;size:512;unique_index" json:"ac_signature,omitempty"`
-		ATSignature    string        `sql:"column:at_signature;size:512;unique_index" json:"at_signature,omitempty"`
-		RTSignature    string        `sql:"column:rt_signature;size:512;unique_index" json:"rt_signature,omitempty"`
+		ACSignature    string        `sql:"column:ac_signature;size:512;index" json:"ac_signature,omitempty"`
+		ATSignature    string        `sql:"column:at_signature;size:512;index" json:"at_signature,omitempty"`
+		RTSignature    string        `sql:"column:rt_signature;size:512;index" json:"rt_signature,omitempty"`
 		RTExpiry       time.Time     `sql:"column:rt_expiry" json:"rt_expiry,omitempty"`
 		ATExpiry       time.Time     `sql:"column:at_expiry" json:"at_expiry,omitempty"`
 		ACExpiry       time.Time     `sql:"column:ac_expiry" json:"ac_expiry,omitempty"`
