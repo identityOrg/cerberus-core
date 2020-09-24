@@ -9,10 +9,9 @@ import (
 	"gopkg.in/square/go-jose.v2"
 	"os"
 	"strings"
-	"time"
 )
 
-func MigrateDB(ormDB *gorm.DB, force bool, demo bool) error {
+func MigrateDB(ormDB *gorm.DB, config *Config, force bool, demo bool) error {
 	if force {
 		fmt.Printf("Do you want to continue (Y/n): ")
 		reader := bufio.NewReader(os.Stdin)
@@ -84,12 +83,6 @@ func MigrateDB(ormDB *gorm.DB, force bool, demo bool) error {
 			return err
 		}
 		fmt.Println("Creating demo user with username=user and password=user")
-		config := &Config{
-			EncryptionKey:          "very secret encryption key",
-			MaxInvalidLoginAttempt: 3,
-			InvalidAttemptWindow:   5 * time.Minute,
-			TOTPSecretLength:       6,
-		}
 
 		userService := NewUserStoreServiceImpl(ormDB, config)
 		metadata := &models.UserMetadata{}
@@ -102,6 +95,10 @@ func MigrateDB(ormDB *gorm.DB, force bool, demo bool) error {
 			return err
 		}
 		err = userService.SetPassword(ctx, uid, "user")
+		if err != nil {
+			return err
+		}
+		err = userService.ActivateUser(ctx, uid)
 		if err != nil {
 			return err
 		}

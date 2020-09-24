@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.4.0
-	github.com/identityOrg/oidcsdk v0.7.2
+	github.com/identityOrg/oidcsdk v0.7.4
 	github.com/jinzhu/gorm v1.9.15
 	github.com/pquerna/otp v1.2.0
 	github.com/stretchr/testify v1.6.1

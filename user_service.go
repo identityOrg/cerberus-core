@@ -118,7 +118,7 @@ func (u *UserStoreServiceImpl) ValidatePassword(ctx context.Context, id uint, pa
 }
 
 func (u *UserStoreServiceImpl) SetPassword(ctx context.Context, id uint, password string) (err error) {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), 13)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), u.Config.PasswordCost)
 	if err != nil {
 		return
 	}
