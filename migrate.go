@@ -5,13 +5,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
+	"github.com/identityOrg/oidcsdk"
 	"github.com/jinzhu/gorm"
 	"gopkg.in/square/go-jose.v2"
 	"os"
 	"strings"
 )
 
-func MigrateDB(ormDB *gorm.DB, config *Config, force bool, demo bool) error {
+func MigrateDB(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, force bool, demo bool) error {
 	if force {
 		fmt.Printf("Do you want to continue (Y/n): ")
 		reader := bufio.NewReader(os.Stdin)
@@ -57,6 +58,8 @@ func MigrateDB(ormDB *gorm.DB, config *Config, force bool, demo bool) error {
 			return fmt.Errorf("error creating table %s:%v", table.TableName(), err)
 		}
 	}
+	ormDB.AddUniqueIndex("idx_channel_name")
+	ormDB.AddUniqueIndex("idx_alg_use")
 	if err := InitializeDefaultScope(ormDB); err != nil {
 		return err
 	}
@@ -71,7 +74,7 @@ func MigrateDB(ormDB *gorm.DB, config *Config, force bool, demo bool) error {
 			Active:       true,
 			Public:       false,
 			Metadata: &models.ServiceProviderMetadata{
-				RedirectUris:             []string{"http://localhost:8080/redirect"},
+				RedirectUris:             []string{sdkConfig.Issuer + "/redirect"},
 				Scopes:                   strings.Split("openid|offline|offline_access", "|"),
 				GrantTypes:               strings.Split("authorization_code|password|refresh_token|client_credentials|implicit", "|"),
 				ApplicationType:          "web",

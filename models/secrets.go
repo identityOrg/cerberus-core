@@ -4,10 +4,10 @@ import "time"
 
 type SecretChannelModel struct {
 	BaseModel
-	Name        string         `sql:"column:name" json:"name"`
-	Algorithm   string         `sql:"column:algorithm" json:"algorithm"`
-	Use         string         `sql:"column:use" json:"use"`
-	ValidityDay uint           `sql:"column:validity_day;unique_index" json:"validity_day"`
+	Name        string         `sql:"column:name;unique_index:idx_channel_name" json:"name"`
+	Algorithm   string         `sql:"column:algorithm;unique_index:idx_alg_use" json:"algorithm"`
+	Use         string         `sql:"column:use;unique_index:idx_alg_use" json:"use"`
+	ValidityDay uint           `sql:"column:validity_day" json:"validity_day"`
 	Secrets     []*SecretModel `sql:"foreignKey:ChannelId" json:"secrets"`
 }
 
