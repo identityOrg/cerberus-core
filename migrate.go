@@ -107,10 +107,12 @@ func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
 	secretT := &models.SecretModel{}
 	userT := &models.UserModel{}
 	credentialsT := &models.UserCredentials{}
+	otpT := &models.UserOTP{}
 	spT := &models.ServiceProviderModel{}
 	tokensT := &models.TokensModel{}
+	jtiT := &models.JTIModel{}
 
-	tables := []dbTable{scopeT, claimT, channelT, secretT, userT, credentialsT, spT, tokensT}
+	tables := []dbTable{scopeT, claimT, channelT, secretT, userT, credentialsT, otpT, spT, tokensT, jtiT}
 
 	fmt.Println("dropping all tables")
 	if drop {
@@ -124,16 +126,23 @@ func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
 
 	fmt.Println("creating all tables")
 	for _, table := range tables {
-		err := ormDB.AutoMigrate(table)
+		var err error
+		if ma, ok := table.(MigrateAware); ok {
+			err = ma.AutoMigrate(ormDB.Migrator())
+		} else {
+			err = ormDB.AutoMigrate(table)
+		}
 		if err != nil {
 			return fmt.Errorf("error creating table %s:%v", table.TableName(), err)
 		}
 	}
-	//ormDB.Model(channelT).AddUniqueIndex("idx_channel_name")//TODO fix
-	//ormDB.Model(channelT).AddUniqueIndex("idx_alg_use")
 	return InitializeDefaultScope(ormDB)
 }
 
 type dbTable interface {
 	TableName() string
+}
+
+type MigrateAware interface {
+	AutoMigrate(db gorm.Migrator) error
 }

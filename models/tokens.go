@@ -13,9 +13,9 @@ type (
 	TokensModel struct {
 		BaseModel
 		RequestID      string        `gorm:"column:request_id;not null" json:"request_id,omitempty"`
-		ACSignature    string        `gorm:"column:ac_signature;size:512;index" json:"ac_signature,omitempty"`
-		ATSignature    string        `gorm:"column:at_signature;size:512;index" json:"at_signature,omitempty"`
-		RTSignature    string        `gorm:"column:rt_signature;size:512;index" json:"rt_signature,omitempty"`
+		ACSignature    string        `gorm:"column:ac_signature;size:512;index:idx_token_ac" json:"ac_signature,omitempty"`
+		ATSignature    string        `gorm:"column:at_signature;size:512;index:idx_token_at" json:"at_signature,omitempty"`
+		RTSignature    string        `gorm:"column:rt_signature;size:512;index:idx_token_rt" json:"rt_signature,omitempty"`
 		RTExpiry       time.Time     `gorm:"column:rt_expiry" json:"rt_expiry,omitempty"`
 		ATExpiry       time.Time     `gorm:"column:at_expiry" json:"at_expiry,omitempty"`
 		ACExpiry       time.Time     `gorm:"column:ac_expiry" json:"ac_expiry,omitempty"`
@@ -29,6 +29,14 @@ type (
 		Expiry time.Time `gorm:"column:expiry" json:"expiry"`
 	}
 )
+
+func (tm JTIModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&tm)
+}
+
+func (tm TokensModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&tm)
+}
 
 func (sp *SavedProfile) GormDBDataType(db *gorm.DB, _ *schema.Field) string {
 	switch db.Dialector.Name() {

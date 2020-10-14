@@ -14,11 +14,15 @@ type ServiceProviderModel struct {
 	BaseModel
 	Name         string                   `gorm:"column:name;not null" json:"name,omitempty"`
 	Description  string                   `gorm:"column:description;size:1024" json:"description,omitempty"`
-	ClientID     string                   `gorm:"column:client_id;unique_index;not null" json:"client_id,omitempty"`
+	ClientID     string                   `gorm:"column:client_id;index:uk_client_id,unique;not null" json:"client_id,omitempty"`
 	ClientSecret string                   `gorm:"column:client_secret" json:"client_secret,omitempty"`
 	Active       bool                     `gorm:"column:active" json:"active,omitempty"`
 	Public       bool                     `gorm:"column:public" json:"public,omitempty"`
 	Metadata     *ServiceProviderMetadata `gorm:"column:metadata" json:"metadata,omitempty"`
+}
+
+func (sp ServiceProviderModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&sp)
 }
 
 func (sp ServiceProviderModel) GetID() string {

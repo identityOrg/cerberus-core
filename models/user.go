@@ -1,17 +1,22 @@
 package models
 
 import (
+	"gorm.io/gorm"
 	"time"
 )
 
 type UserModel struct {
 	BaseModel
-	Username         string            `gorm:"column:username;unique_index" json:"username,omitempty"`
-	EmailAddress     string            `gorm:"column:email_address;size:512;unique_index" json:"email_address,omitempty"`
+	Username         string            `gorm:"column:username;index:idx_user_name,unique" json:"username,omitempty"`
+	EmailAddress     string            `gorm:"column:email_address;size:512;index:idx_user_email,unique" json:"email_address,omitempty"`
 	TempEmailAddress string            `gorm:"column:temp_email_address;size:512;" json:"-"`
 	Metadata         *UserMetadata     `gorm:"column:metadata" json:"metadata,omitempty"`
 	Credentials      []UserCredentials `gorm:"foreignKey:UserID" json:"credentials,omitempty"`
 	Inactive         bool              `gorm:"column:inactive" json:"inactive,omitempty"`
+}
+
+func (um UserModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&um)
 }
 
 func (um UserModel) TableName() string {
@@ -20,12 +25,16 @@ func (um UserModel) TableName() string {
 
 type UserCredentials struct {
 	DeletableBaseModel
-	UserID              uint       `gorm:"column:user_id;not null" json:"-"`
-	Type                uint8      `gorm:"column:cred_type;auto_increment:false" json:"cred_type,omitempty"`
+	UserID              uint       `gorm:"column:user_id;not null;index:uk_user_cred_type,unique" json:"-"`
+	Type                uint8      `gorm:"column:cred_type;auto_increment:false;index:uk_user_cred_type,unique" json:"cred_type,omitempty"`
 	Value               string     `gorm:"column:value;size:2048" json:"value,omitempty"`
 	FirstInvalidAttempt *time.Time `gorm:"column:first_invalid_attempt" json:"first_invalid_attempt,omitempty"`
 	InvalidAttemptCount uint       `gorm:"column:invalid_attempt_count" json:"invalid_attempt_count,omitempty"`
 	Bocked              bool       `gorm:"column:blocked" json:"bocked,omitempty"`
+}
+
+func (uc UserCredentials) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&uc)
 }
 
 func (uc UserCredentials) TableName() string {
@@ -37,7 +46,11 @@ type UserOTP struct {
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at,omitempty"`
 	DeletedAt *time.Time `gorm:"column:deleted_at;index" json:"deleted_at,omitempty"`
 	ValueHash string     `gorm:"column:hash_value;index" json:"value_hash,omitempty"`
-	UserID    uint       `gorm:"column:user_id" json:"user_id"`
+	UserID    uint       `gorm:"column:user_id;index:uk_user_otp_id,unique" json:"user_id"`
+}
+
+func (o UserOTP) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&o)
 }
 
 func (o UserOTP) TableName() string {

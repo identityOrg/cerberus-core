@@ -1,14 +1,21 @@
 package models
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type SecretChannelModel struct {
 	BaseModel
-	Name        string         `gorm:"column:name;unique_index:idx_channel_name" json:"name"`
-	Algorithm   string         `gorm:"column:algorithm;unique_index:idx_alg_use" json:"algorithm"`
-	Use         string         `gorm:"column:use;unique_index:idx_alg_use" json:"use"`
+	Name        string         `gorm:"column:name;index:idx_channel_name,unique" json:"name"`
+	Algorithm   string         `gorm:"column:algorithm;index:idx_alg_use,unique" json:"algorithm"`
+	Use         string         `gorm:"column:use;index:idx_alg_use,unique" json:"use"`
 	ValidityDay uint           `gorm:"column:validity_day" json:"validity_day"`
 	Secrets     []*SecretModel `gorm:"foreignKey:ChannelId" json:"secrets"`
+}
+
+func (sp SecretChannelModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&sp)
 }
 
 func (sp SecretChannelModel) TableName() string {
@@ -24,6 +31,10 @@ type SecretModel struct {
 	ChannelId uint      `gorm:"column:channel_id" json:"channel_id"`
 	Algorithm string    `gorm:"column:algorithm" json:"-"`
 	Use       string    `gorm:"column:use" json:"-"`
+}
+
+func (sp SecretModel) AutoMigrate(db gorm.Migrator) error {
+	return db.AutoMigrate(&sp)
 }
 
 func (sp SecretModel) TableName() string {
