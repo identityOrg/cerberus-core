@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/identityOrg/oidcsdk"
-	"github.com/jinzhu/gorm"
 	"gopkg.in/square/go-jose.v2"
+	"gorm.io/gorm"
 	"os"
 	"strings"
 )
@@ -115,7 +115,7 @@ func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
 	fmt.Println("dropping all tables")
 	if drop {
 		for _, table := range tables {
-			err := ormDB.DropTableIfExists(table).Error
+			err := ormDB.Migrator().DropTable(table)
 			if err != nil {
 				return fmt.Errorf("error dropping table %s:%v", table.TableName(), err)
 			}
@@ -124,13 +124,13 @@ func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
 
 	fmt.Println("creating all tables")
 	for _, table := range tables {
-		err := ormDB.AutoMigrate(table).Error
+		err := ormDB.AutoMigrate(table)
 		if err != nil {
 			return fmt.Errorf("error creating table %s:%v", table.TableName(), err)
 		}
 	}
-	ormDB.Model(channelT).AddUniqueIndex("idx_channel_name")
-	ormDB.Model(channelT).AddUniqueIndex("idx_alg_use")
+	//ormDB.Model(channelT).AddUniqueIndex("idx_channel_name")//TODO fix
+	//ormDB.Model(channelT).AddUniqueIndex("idx_alg_use")
 	return InitializeDefaultScope(ormDB)
 }
 

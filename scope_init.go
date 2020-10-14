@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/identityOrg/cerberus-core/models"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 var StandardScopes = map[string]string{
@@ -68,7 +68,7 @@ func InitializeDefaultScope(db *gorm.DB) error {
 				if err != nil {
 					return err
 				}
-				err = ass.Append(claim).Error
+				err = ass.Append(claim)
 				if err != nil {
 					return err
 				}

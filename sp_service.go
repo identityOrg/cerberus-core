@@ -3,12 +3,11 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/identityOrg/oidcsdk"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type SPStoreServiceImpl struct {
@@ -45,8 +44,8 @@ func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, public bool,
 	user.ID = id
 	db := s.Db
 	findResult := db.Find(user)
-	if findResult.RecordNotFound() {
-		return errors.New("service provider not found")
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -61,8 +60,8 @@ func (s *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *mod
 	user.ID = id
 	db := s.Db
 	findResult := db.Find(user)
-	if findResult.RecordNotFound() {
-		return errors.New("service provider not found")
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -167,8 +166,8 @@ func (s *SPStoreServiceImpl) GetSP(ctx context.Context, id uint) (sp *models.Ser
 	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, id)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no SP found with id %d", id)
+	if result.Error != nil {
+		return nil, result.Error
 	}
 	err = result.Error
 	return
@@ -178,8 +177,11 @@ func (s *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId stri
 	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, "client_id = ?", clientId)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no SP found with client_id %s", clientId)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, fmt.Errorf("sp with client_id = %s not found", clientId)
 	}
 	err = result.Error
 	return
@@ -189,23 +191,23 @@ func (s *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp 
 	tx := s.Db
 	sp = &models.ServiceProviderModel{}
 	result := tx.First(sp, "name like ?", name)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no SP found with name %s", name)
+	if result.Error != nil {
+		return nil, result.Error
 	}
 	err = result.Error
 	return
 }
 
 func (s *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error) {
-	var total uint
+	var total int64
 	tx := s.Db
 	query := tx.Select([]string{"id", "name", "description", "client_id", "active"}).Model(&models.ServiceProviderModel{})
-	err = query.Limit(pageSize).Offset(pageSize * page).Find(&sps).Error
+	err = query.Limit(int(pageSize)).Offset(int(pageSize * page)).Find(&sps).Error
 	if err != nil {
 		return nil, 0, err
 	}
 	query.Count(&total)
-	return sps, total, nil
+	return sps, uint(total), nil
 }
 
 func NewSPStoreServiceImpl(db *gorm.DB, dec ITextDecrypts, enc ITextEncrypts) *SPStoreServiceImpl {

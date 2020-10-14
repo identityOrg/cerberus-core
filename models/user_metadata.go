@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type (
@@ -68,7 +70,18 @@ type (
 	UserAddress  map[string]interface{}
 )
 
-func (u UserMetadata) Scan(src interface{}) error {
+func (u *UserMetadata) GormDBDataType(db *gorm.DB, _ *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "mysql", "sqlite":
+		return "JSON"
+	case "postgres":
+		return "JSONB"
+	default:
+		return "lob"
+	}
+}
+
+func (u *UserMetadata) Scan(src interface{}) error {
 	if bytes, ok := src.([]byte); ok {
 		return json.Unmarshal(bytes, &u)
 	} else {
@@ -76,7 +89,7 @@ func (u UserMetadata) Scan(src interface{}) error {
 	}
 }
 
-func (u UserMetadata) Value() (driver.Value, error) {
+func (u *UserMetadata) Value() (driver.Value, error) {
 	return json.Marshal(u)
 }
 
@@ -136,160 +149,160 @@ func (u UserAddress) SetAttribute(name string, value interface{}) {
 	u[name] = value
 }
 
-func (u UserMetadata) GetName() string {
-	return extractStringAttribute(u, "name")
+func (u *UserMetadata) GetName() string {
+	return extractStringAttribute(*u, "name")
 }
 
-func (u UserMetadata) SetName(name string) {
-	u["name"] = name
+func (u *UserMetadata) SetName(name string) {
+	(*u)["name"] = name
 }
 
-func (u UserMetadata) GetGivenName() string {
-	return extractStringAttribute(u, "given_name")
+func (u *UserMetadata) GetGivenName() string {
+	return extractStringAttribute(*u, "given_name")
 }
 
-func (u UserMetadata) SetGivenName(givenName string) {
-	u["given_name"] = givenName
+func (u *UserMetadata) SetGivenName(givenName string) {
+	(*u)["given_name"] = givenName
 }
 
-func (u UserMetadata) GetFamilyName() string {
-	return extractStringAttribute(u, "family_name")
+func (u *UserMetadata) GetFamilyName() string {
+	return extractStringAttribute(*u, "family_name")
 }
 
-func (u UserMetadata) SetFamilyName(familyName string) {
-	u["family_name"] = familyName
+func (u *UserMetadata) SetFamilyName(familyName string) {
+	(*u)["family_name"] = familyName
 }
 
-func (u UserMetadata) GetMiddleName() string {
-	return extractStringAttribute(u, "middle_name")
+func (u *UserMetadata) GetMiddleName() string {
+	return extractStringAttribute(*u, "middle_name")
 }
 
-func (u UserMetadata) SetMiddleName(middleName string) {
-	u["middle_name"] = middleName
+func (u *UserMetadata) SetMiddleName(middleName string) {
+	(*u)["middle_name"] = middleName
 }
 
-func (u UserMetadata) GetNickname() string {
-	return extractStringAttribute(u, "nickname")
+func (u *UserMetadata) GetNickname() string {
+	return extractStringAttribute(*u, "nickname")
 }
 
-func (u UserMetadata) SetNickname(nickname string) {
-	u["nickname"] = nickname
+func (u *UserMetadata) SetNickname(nickname string) {
+	(*u)["nickname"] = nickname
 }
 
-func (u UserMetadata) GetPreferredUsername() string {
-	return extractStringAttribute(u, "preferred_username")
+func (u *UserMetadata) GetPreferredUsername() string {
+	return extractStringAttribute(*u, "preferred_username")
 }
 
-func (u UserMetadata) SetPreferredUsername(preferredUsername string) {
-	u["preferred_username"] = preferredUsername
+func (u *UserMetadata) SetPreferredUsername(preferredUsername string) {
+	(*u)["preferred_username"] = preferredUsername
 }
 
-func (u UserMetadata) GetProfile() string {
-	return extractStringAttribute(u, "profile")
+func (u *UserMetadata) GetProfile() string {
+	return extractStringAttribute(*u, "profile")
 }
 
-func (u UserMetadata) SetProfile(profile string) {
-	u["profile"] = profile
+func (u *UserMetadata) SetProfile(profile string) {
+	(*u)["profile"] = profile
 }
 
-func (u UserMetadata) GetPicture() string {
-	return extractStringAttribute(u, "picture")
+func (u *UserMetadata) GetPicture() string {
+	return extractStringAttribute(*u, "picture")
 }
 
-func (u UserMetadata) SetPicture(picture string) {
-	u["picture"] = picture
+func (u *UserMetadata) SetPicture(picture string) {
+	(*u)["picture"] = picture
 }
 
-func (u UserMetadata) GetWebsite() string {
-	return extractStringAttribute(u, "website")
+func (u *UserMetadata) GetWebsite() string {
+	return extractStringAttribute(*u, "website")
 }
 
-func (u UserMetadata) SetWebsite(website string) {
-	u["website"] = website
+func (u *UserMetadata) SetWebsite(website string) {
+	(*u)["website"] = website
 }
 
-func (u UserMetadata) GetEmail() string {
-	return extractStringAttribute(u, "email")
+func (u *UserMetadata) GetEmail() string {
+	return extractStringAttribute(*u, "email")
 }
 
-func (u UserMetadata) SetEmail(email string) {
-	u["email"] = email
+func (u *UserMetadata) SetEmail(email string) {
+	(*u)["email"] = email
 }
 
-func (u UserMetadata) GetEmailVerified() bool {
+func (u *UserMetadata) GetEmailVerified() bool {
 	return extractBoolAttribute(u, "email_verified")
 }
 
-func (u UserMetadata) SetEmailVerified(emailVerified bool) {
-	u["email_verified"] = emailVerified
+func (u *UserMetadata) SetEmailVerified(emailVerified bool) {
+	(*u)["email_verified"] = emailVerified
 }
 
-func (u UserMetadata) GetGender() string {
-	return extractStringAttribute(u, "gender")
+func (u *UserMetadata) GetGender() string {
+	return extractStringAttribute(*u, "gender")
 }
 
-func (u UserMetadata) SetGender(gender string) {
-	u["gender"] = gender
+func (u *UserMetadata) SetGender(gender string) {
+	(*u)["gender"] = gender
 }
 
-func (u UserMetadata) GetBirthDate() string {
-	return extractStringAttribute(u, "birth_date")
+func (u *UserMetadata) GetBirthDate() string {
+	return extractStringAttribute(*u, "birth_date")
 }
 
-func (u UserMetadata) SetBirthDate(birthDate string) {
-	u["birth_date"] = birthDate
+func (u *UserMetadata) SetBirthDate(birthDate string) {
+	(*u)["birth_date"] = birthDate
 }
 
-func (u UserMetadata) GetZoneInfo() string {
-	return extractStringAttribute(u, "zone_info")
+func (u *UserMetadata) GetZoneInfo() string {
+	return extractStringAttribute(*u, "zone_info")
 }
 
-func (u UserMetadata) SetZoneInfo(zoneInfo string) {
-	u["zone_info"] = zoneInfo
+func (u *UserMetadata) SetZoneInfo(zoneInfo string) {
+	(*u)["zone_info"] = zoneInfo
 }
 
-func (u UserMetadata) GetLocale() string {
-	return extractStringAttribute(u, "locale")
+func (u *UserMetadata) GetLocale() string {
+	return extractStringAttribute(*u, "locale")
 }
 
-func (u UserMetadata) SetLocale(locale string) {
-	u["locale"] = locale
+func (u *UserMetadata) SetLocale(locale string) {
+	(*u)["locale"] = locale
 }
 
-func (u UserMetadata) GetPhoneNumber() string {
-	return extractStringAttribute(u, "phone_number")
+func (u *UserMetadata) GetPhoneNumber() string {
+	return extractStringAttribute(*u, "phone_number")
 }
 
-func (u UserMetadata) SetPhoneNumber(phoneNumber string) {
-	u["phone_number"] = phoneNumber
+func (u *UserMetadata) SetPhoneNumber(phoneNumber string) {
+	(*u)["phone_number"] = phoneNumber
 }
 
-func (u UserMetadata) GetPhoneNumberVerified() bool {
+func (u *UserMetadata) GetPhoneNumberVerified() bool {
 	return extractBoolAttribute(u, "phone_number_verified")
 }
 
-func (u UserMetadata) SetPhoneNumberVerified(phoneNumberVerified bool) {
-	u["phone_number_verified"] = phoneNumberVerified
+func (u *UserMetadata) SetPhoneNumberVerified(phoneNumberVerified bool) {
+	(*u)["phone_number_verified"] = phoneNumberVerified
 }
 
-func (u UserMetadata) GetAddress() IAddress {
-	if addr, ok := u["address"].(IAddress); ok {
+func (u *UserMetadata) GetAddress() IAddress {
+	if addr, ok := (*u)["address"].(IAddress); ok {
 		return addr
 	} else {
 		return nil
 	}
 }
 
-func (u UserMetadata) SetAddress(address IAddress) {
-	u["address"] = address
+func (u *UserMetadata) SetAddress(address IAddress) {
+	(*u)["address"] = address
 }
 
-func (u UserMetadata) GetAttribute(name string) interface{} {
-	return u[name]
+func (u *UserMetadata) GetAttribute(name string) interface{} {
+	return (*u)[name]
 }
 
-func (u UserMetadata) SetAttribute(name string, value interface{}) {
-	u[name] = value
+func (u *UserMetadata) SetAttribute(name string, value interface{}) {
+	(*u)[name] = value
 }
 
 func extractStringAttribute(u map[string]interface{}, key string) string {
@@ -300,8 +313,8 @@ func extractStringAttribute(u map[string]interface{}, key string) string {
 	}
 }
 
-func extractBoolAttribute(u UserMetadata, key string) bool {
-	if val, ok := u[key].(bool); ok {
+func extractBoolAttribute(u *UserMetadata, key string) bool {
+	if val, ok := (*u)[key].(bool); ok {
 		return val
 	} else {
 		return false

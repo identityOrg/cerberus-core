@@ -6,17 +6,19 @@ import (
 	"errors"
 	"github.com/identityOrg/oidcsdk"
 	"gopkg.in/square/go-jose.v2"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type ServiceProviderModel struct {
 	BaseModel
-	Name         string                   `sql:"column:name;not null" json:"name,omitempty"`
-	Description  string                   `sql:"column:description;size:1024" json:"description,omitempty"`
-	ClientID     string                   `sql:"column:client_id;unique_index;not null" json:"client_id,omitempty"`
-	ClientSecret string                   `sql:"column:client_secret" json:"client_secret,omitempty"`
-	Active       bool                     `sql:"column:active" json:"active,omitempty"`
-	Public       bool                     `sql:"column:public" json:"public,omitempty"`
-	Metadata     *ServiceProviderMetadata `sql:"column:metadata;type:lob" json:"metadata,omitempty"`
+	Name         string                   `gorm:"column:name;not null" json:"name,omitempty"`
+	Description  string                   `gorm:"column:description;size:1024" json:"description,omitempty"`
+	ClientID     string                   `gorm:"column:client_id;unique_index;not null" json:"client_id,omitempty"`
+	ClientSecret string                   `gorm:"column:client_secret" json:"client_secret,omitempty"`
+	Active       bool                     `gorm:"column:active" json:"active,omitempty"`
+	Public       bool                     `gorm:"column:public" json:"public,omitempty"`
+	Metadata     *ServiceProviderMetadata `gorm:"column:metadata" json:"metadata,omitempty"`
 }
 
 func (sp ServiceProviderModel) GetID() string {
@@ -100,6 +102,17 @@ type ServiceProviderMetadata struct {
 	InitiateLoginUri             string                 `json:"initiate_login_uri,omitempty"`
 	RequestUris                  []string               `json:"request_uris,omitempty"`
 	OtherAttributes              map[string]interface{} `json:"other_attributes,omitempty"`
+}
+
+func (spm *ServiceProviderMetadata) GormDBDataType(db *gorm.DB, _ *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "mysql", "sqlite":
+		return "JSON"
+	case "postgres":
+		return "JSONB"
+	default:
+		return "lob"
+	}
 }
 
 func (spm *ServiceProviderMetadata) Scan(src interface{}) error {

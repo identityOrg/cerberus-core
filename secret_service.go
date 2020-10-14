@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/identityOrg/cerberus-core/models"
-	"github.com/jinzhu/gorm"
 	"gopkg.in/square/go-jose.v2"
+	"gorm.io/gorm"
 	"time"
 )
 

@@ -4,29 +4,42 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"time"
 )
 
 type (
 	TokensModel struct {
 		BaseModel
-		RequestID      string        `sql:"column:request_id;not null" json:"request_id,omitempty"`
-		ACSignature    string        `sql:"column:ac_signature;size:512;index" json:"ac_signature,omitempty"`
-		ATSignature    string        `sql:"column:at_signature;size:512;index" json:"at_signature,omitempty"`
-		RTSignature    string        `sql:"column:rt_signature;size:512;index" json:"rt_signature,omitempty"`
-		RTExpiry       time.Time     `sql:"column:rt_expiry" json:"rt_expiry,omitempty"`
-		ATExpiry       time.Time     `sql:"column:at_expiry" json:"at_expiry,omitempty"`
-		ACExpiry       time.Time     `sql:"column:ac_expiry" json:"ac_expiry,omitempty"`
-		RequestProfile *SavedProfile `sql:"column:request_profile;type:lob" json:"request_profile,omitempty"`
+		RequestID      string        `gorm:"column:request_id;not null" json:"request_id,omitempty"`
+		ACSignature    string        `gorm:"column:ac_signature;size:512;index" json:"ac_signature,omitempty"`
+		ATSignature    string        `gorm:"column:at_signature;size:512;index" json:"at_signature,omitempty"`
+		RTSignature    string        `gorm:"column:rt_signature;size:512;index" json:"rt_signature,omitempty"`
+		RTExpiry       time.Time     `gorm:"column:rt_expiry" json:"rt_expiry,omitempty"`
+		ATExpiry       time.Time     `gorm:"column:at_expiry" json:"at_expiry,omitempty"`
+		ACExpiry       time.Time     `gorm:"column:ac_expiry" json:"ac_expiry,omitempty"`
+		RequestProfile *SavedProfile `gorm:"column:request_profile" json:"request_profile,omitempty"`
 	}
 	SavedProfile struct {
 		Attributes map[string]string
 	}
 	JTIModel struct {
-		ID     string    `sql:"column:id;size:256;primary_key" json:"id"`
-		Expiry time.Time `sql:"column:expiry" json:"expiry"`
+		ID     string    `gorm:"column:id;size:256;primary_key" json:"id"`
+		Expiry time.Time `gorm:"column:expiry" json:"expiry"`
 	}
 )
+
+func (sp *SavedProfile) GormDBDataType(db *gorm.DB, _ *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "mysql", "sqlite":
+		return "JSON"
+	case "postgres":
+		return "JSONB"
+	default:
+		return "lob"
+	}
+}
 
 func (tm TokensModel) TableName() string {
 	return "t_tokens"

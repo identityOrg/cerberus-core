@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/identityOrg/oidcsdk"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -41,11 +41,11 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context,
 	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "ac_signature = ?", signature)
-	if result.RecordNotFound() {
-		return nil, "", fmt.Errorf("authorization code not found")
-	}
 	if result.Error != nil {
 		return nil, "", result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, "", fmt.Errorf("authorization code not found")
 	}
 	if token.ACExpiry.Before(time.Now()) {
 		return nil, "", fmt.Errorf("authorization code expired")
@@ -57,8 +57,8 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Conte
 	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "at_signature = ?", signature)
-	if result.RecordNotFound() {
-		return nil, "", fmt.Errorf("access token not found")
+	if result.Error != nil {
+		return nil, "", result.Error
 	}
 	if result.Error != nil {
 		return nil, "", result.Error
@@ -73,8 +73,8 @@ func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Cont
 	txn := ts.Db
 	token := &models.TokensModel{}
 	result := txn.Find(token, "rt_signature = ?", signature)
-	if result.RecordNotFound() {
-		return nil, "", fmt.Errorf("refresh token not found")
+	if result.Error != nil {
+		return nil, "", result.Error
 	}
 	if result.Error != nil {
 		return nil, "", result.Error

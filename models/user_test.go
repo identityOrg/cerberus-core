@@ -3,7 +3,8 @@ package models
 import (
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func init() {
 }
 
 func TestUserCredentials_Migrate(t *testing.T) {
-	db, err := gorm.Open("sqlite3", "sp.db")
+	db, err := gorm.Open(sqlite.Open("sp.db"), &gorm.Config{})
 	if err != nil {
 		t.Error(err)
 	}

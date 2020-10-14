@@ -2,10 +2,8 @@ package core
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type ScopeClaimStoreServiceImpl struct {
@@ -30,9 +28,6 @@ func (s *ScopeClaimStoreServiceImpl) FindScopeByName(ctx context.Context, name s
 	tx := s.Db
 	scope := &models.ScopeModel{}
 	result := tx.First(scope, "name like ?", name)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no scope found with name %s", name)
-	}
 	return scope, result.Error
 }
 
@@ -40,23 +35,20 @@ func (s *ScopeClaimStoreServiceImpl) GetScope(ctx context.Context, id uint) (*mo
 	tx := s.Db
 	scope := &models.ScopeModel{}
 	result := tx.Find(scope, id)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no scope found with id %d", id)
-	}
 	return scope, result.Error
 }
 
 func (s *ScopeClaimStoreServiceImpl) GetAllScopes(ctx context.Context, page uint, pageSize uint) ([]*models.ScopeModel, uint, error) {
-	var total uint
+	var total int64
 	tx := s.Db
 	scopes := make([]*models.ScopeModel, 0)
 	query := tx.Model(&models.ServiceProviderModel{})
-	err := query.Limit(pageSize).Offset(pageSize * page).Find(&scopes).Error
+	err := query.Limit(int(pageSize)).Offset(int(pageSize * page)).Find(&scopes).Error
 	if err != nil {
 		return nil, 0, err
 	}
 	query.Count(&total)
-	return scopes, total, nil
+	return scopes, uint(total), nil
 }
 
 func (s *ScopeClaimStoreServiceImpl) UpdateScope(ctx context.Context, id uint, description string) error {
@@ -64,8 +56,8 @@ func (s *ScopeClaimStoreServiceImpl) UpdateScope(ctx context.Context, id uint, d
 	scope.ID = id
 	db := s.Db
 	findResult := db.Find(scope)
-	if findResult.RecordNotFound() {
-		return errors.New("scope not found")
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -86,8 +78,8 @@ func (s *ScopeClaimStoreServiceImpl) AddClaimToScope(ctx context.Context, scopeI
 	scope := &models.ScopeModel{}
 	scope.ID = scopeId
 	findResult := db.Find(scope)
-	if findResult.RecordNotFound() {
-		return fmt.Errorf("scope with id %d not found", scopeId)
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -95,8 +87,8 @@ func (s *ScopeClaimStoreServiceImpl) AddClaimToScope(ctx context.Context, scopeI
 	claim := &models.ClaimModel{}
 	claim.ID = claimId
 	findResult = db.Find(claim)
-	if findResult.RecordNotFound() {
-		return fmt.Errorf("claim with id %d not found", claimId)
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -105,7 +97,7 @@ func (s *ScopeClaimStoreServiceImpl) AddClaimToScope(ctx context.Context, scopeI
 	if claimAssociation.Error != nil {
 		return claimAssociation.Error
 	}
-	return claimAssociation.Append(claim).Error
+	return claimAssociation.Append(claim)
 }
 
 func (s *ScopeClaimStoreServiceImpl) RemoveClaimFromScope(ctx context.Context, scopeId uint, claimId uint) error {
@@ -113,8 +105,8 @@ func (s *ScopeClaimStoreServiceImpl) RemoveClaimFromScope(ctx context.Context, s
 	scope := &models.ScopeModel{}
 	scope.ID = scopeId
 	findResult := db.Find(scope)
-	if findResult.RecordNotFound() {
-		return fmt.Errorf("scope with id %d not found", scopeId)
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -122,8 +114,8 @@ func (s *ScopeClaimStoreServiceImpl) RemoveClaimFromScope(ctx context.Context, s
 	claim := &models.ClaimModel{}
 	claim.ID = claimId
 	findResult = db.Find(claim)
-	if findResult.RecordNotFound() {
-		return fmt.Errorf("claim with id %d not found", claimId)
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error
@@ -132,7 +124,7 @@ func (s *ScopeClaimStoreServiceImpl) RemoveClaimFromScope(ctx context.Context, s
 	if claimAssociation.Error != nil {
 		return claimAssociation.Error
 	}
-	return claimAssociation.Delete(claim).Error
+	return claimAssociation.Delete(claim)
 }
 
 func (s *ScopeClaimStoreServiceImpl) CreateClaim(ctx context.Context, name string, description string) (id uint, err error) {
@@ -149,8 +141,8 @@ func (s *ScopeClaimStoreServiceImpl) FindClaimByName(ctx context.Context, name s
 	tx := s.Db
 	claim := &models.ClaimModel{}
 	result := tx.First(claim, "name like ?", name)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no claim found with name %s", name)
+	if result.Error != nil {
+		return nil, result.Error
 	}
 	return claim, result.Error
 }
@@ -159,23 +151,20 @@ func (s *ScopeClaimStoreServiceImpl) GetClaim(ctx context.Context, id uint) (*mo
 	tx := s.Db
 	claim := &models.ClaimModel{}
 	result := tx.Find(claim, id)
-	if result.RecordNotFound() {
-		return nil, fmt.Errorf("no claim found with id %d", id)
-	}
 	return claim, result.Error
 }
 
 func (s *ScopeClaimStoreServiceImpl) GetAllClaims(ctx context.Context, page uint, pageSize uint) ([]*models.ClaimModel, uint, error) {
-	var total uint
+	var total int64
 	tx := s.Db
 	claims := make([]*models.ClaimModel, 0)
 	query := tx.Model(&models.ClaimModel{})
-	err := query.Limit(pageSize).Offset(pageSize * page).Find(&claims).Error
+	err := query.Limit(int(pageSize)).Offset(int(pageSize * page)).Find(&claims).Error
 	if err != nil {
 		return nil, 0, err
 	}
 	query.Count(&total)
-	return claims, total, nil
+	return claims, uint(total), nil
 }
 
 func (s *ScopeClaimStoreServiceImpl) UpdateClaim(ctx context.Context, id uint, description string) error {
@@ -183,8 +172,8 @@ func (s *ScopeClaimStoreServiceImpl) UpdateClaim(ctx context.Context, id uint, d
 	claim.ID = id
 	db := s.Db
 	findResult := db.Find(claim)
-	if findResult.RecordNotFound() {
-		return errors.New("claim not found")
+	if findResult.Error != nil {
+		return findResult.Error
 	}
 	if findResult.Error != nil {
 		return findResult.Error

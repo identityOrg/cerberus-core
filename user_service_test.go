@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/base32"
+	"fmt"
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -120,7 +121,7 @@ func TestUserStoreServiceImpl_ValidatePassword(t *testing.T) {
 	t.Run("cred not found", func(t *testing.T) {
 		err := userStoreService.ValidatePassword(ctx, TestNoCredUser2.ID, "password")
 		if assert.Error(t, err) {
-			assert.EqualError(t, err, "credential not found")
+			assert.EqualError(t, err, fmt.Sprintf("password not set for user %d", TestNoCredUser2.ID))
 		}
 	})
 	rollbackTransaction(userStoreService.Db)
@@ -237,7 +238,7 @@ func TestUserStoreServiceImpl_GenerateTOTP(t *testing.T) {
 		image, secret, err := userStoreService.GenerateTOTP(ctx, 2000, "cerberus")
 		if assert.Error(t, err) {
 			assert.Nil(t, image)
-			assert.EqualError(t, err, "user not found")
+			assert.EqualError(t, err, "user not found with id 2000")
 			assert.Equal(t, "", secret)
 		}
 	})
@@ -304,7 +305,7 @@ func TestUserStoreServiceImpl_GetUser(t *testing.T) {
 		user, err := userStoreService.GetUser(ctx, 2000)
 		if assert.Error(t, err) {
 			assert.Nil(t, user)
-			assert.EqualError(t, err, "user not found")
+			assert.EqualError(t, err, "user not found with id 2000")
 		}
 	})
 	rollbackTransaction(userStoreService.Db)
