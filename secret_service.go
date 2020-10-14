@@ -23,7 +23,7 @@ func NewSecretStoreServiceImpl(db *gorm.DB) *SecretStoreServiceImpl {
 	return &SecretStoreServiceImpl{Db: db}
 }
 
-func (s *SecretStoreServiceImpl) GetAllSecrets(ctx context.Context) (*jose.JSONWebKeySet, error) {
+func (s *SecretStoreServiceImpl) GetAllSecrets(_ context.Context) (*jose.JSONWebKeySet, error) {
 	db := s.Db
 	secrets := make([]models.SecretModel, 0)
 	db.Find(&secrets)
@@ -46,7 +46,7 @@ func (s *SecretStoreServiceImpl) GetAllSecrets(ctx context.Context) (*jose.JSONW
 	return keySet, nil
 }
 
-func (s *SecretStoreServiceImpl) CreateChannel(ctx context.Context, name string, algorithm string, use string, validityDay uint) (uint, error) {
+func (s *SecretStoreServiceImpl) CreateChannel(_ context.Context, name string, algorithm string, use string, validityDay uint) (uint, error) {
 	channel := &models.SecretChannelModel{
 		Name:        name,
 		Algorithm:   algorithm,
@@ -73,26 +73,40 @@ func (s *SecretStoreServiceImpl) CreateChannel(ctx context.Context, name string,
 	return channel.ID, result.Error
 }
 
-func (s *SecretStoreServiceImpl) GetAllChannels(ctx context.Context) ([]*models.SecretChannelModel, error) {
+func (s *SecretStoreServiceImpl) GetAllChannels(_ context.Context) ([]*models.SecretChannelModel, error) {
 	db := s.Db
 	channels := make([]*models.SecretChannelModel, 0)
 	findResult := db.Find(channels)
 	return channels, findResult.Error
 }
 
-func (s *SecretStoreServiceImpl) GetChannel(ctx context.Context, channelId uint) (*models.SecretChannelModel, error) {
+func (s *SecretStoreServiceImpl) GetChannel(_ context.Context, channelId uint) (*models.SecretChannelModel, error) {
 	db := s.Db
 	channels := &models.SecretChannelModel{}
 	findResult := db.Preload("Secrets").Find(channels, channelId)
 	return channels, findResult.Error
 }
 
-func (s *SecretStoreServiceImpl) DeleteChannel(ctx context.Context, channelId uint) error {
+func (s *SecretStoreServiceImpl) GetChannelByName(_ context.Context, name string) (*models.SecretChannelModel, error) {
+	db := s.Db
+	channels := &models.SecretChannelModel{}
+	findResult := db.Preload("Secrets").Find(channels, "name = ?", name)
+	return channels, findResult.Error
+}
+
+func (s *SecretStoreServiceImpl) GetChannelByAlgoUse(_ context.Context, algo string, use string) (*models.SecretChannelModel, error) {
+	db := s.Db
+	channels := &models.SecretChannelModel{}
+	findResult := db.Preload("Secrets").Find(channels, "algorithm = ? and use = ?", algo, use)
+	return channels, findResult.Error
+}
+
+func (s *SecretStoreServiceImpl) DeleteChannel(_ context.Context, channelId uint) error {
 	db := s.Db
 	return db.Delete(&models.SecretChannelModel{}, channelId).Error
 }
 
-func (s *SecretStoreServiceImpl) RenewSecret(ctx context.Context, channelId uint) error {
+func (s *SecretStoreServiceImpl) RenewSecret(_ context.Context, channelId uint) error {
 	db := s.Db
 	channel := &models.SecretChannelModel{}
 	channel.ID = channelId

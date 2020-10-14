@@ -40,7 +40,7 @@ func (s *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, de
 	return user.ID, saveResult.Error
 }
 
-func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
+func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, public bool, metadata *models.ServiceProviderMetadata) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
 	db := s.Db
@@ -52,6 +52,7 @@ func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, metadata *mo
 		return findResult.Error
 	}
 	user.Metadata = metadata
+	user.Public = public
 	return db.Save(user).Error
 }
 
@@ -85,14 +86,14 @@ func (s *SPStoreServiceImpl) DeleteSP(ctx context.Context, id uint) (err error) 
 }
 
 func (s *SPStoreServiceImpl) ActivateSP(ctx context.Context, id uint) error {
-	return s.updateStatus(ctx, id, true)
+	return s.updateStatus(id, true)
 }
 
 func (s *SPStoreServiceImpl) DeactivateSP(ctx context.Context, id uint) error {
-	return s.updateStatus(ctx, id, false)
+	return s.updateStatus(id, false)
 }
 
-func (s *SPStoreServiceImpl) updateStatus(ctx context.Context, id uint, active bool) error {
+func (s *SPStoreServiceImpl) updateStatus(id uint, active bool) error {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
 	db := s.Db

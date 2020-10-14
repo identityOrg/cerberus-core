@@ -14,25 +14,33 @@ import (
 
 func SetupDemoData(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, redirectUri string) error {
 	fmt.Println("Creating demo client with client_id=client and client_secret=client")
-	demoSp := &models.ServiceProviderModel{
-		Name:         "Demo Client",
-		Description:  "Demo Client",
-		ClientID:     "client",
-		ClientSecret: "client",
-		Active:       true,
-		Public:       false,
-		Metadata: &models.ServiceProviderMetadata{
-			RedirectUris:             []string{sdkConfig.Issuer + "/redirect"},
-			Scopes:                   strings.Split("openid|offline|offline_access", "|"),
-			GrantTypes:               strings.Split("authorization_code|password|refresh_token|client_credentials|implicit", "|"),
-			ApplicationType:          "web",
-			IdTokenSignedResponseAlg: string(jose.RS256),
-		},
+	spMetadata := &models.ServiceProviderMetadata{
+		RedirectUris:             []string{sdkConfig.Issuer + "/redirect"},
+		Scopes:                   strings.Split("openid|offline|offline_access", "|"),
+		GrantTypes:               strings.Split("authorization_code|password|refresh_token|client_credentials|implicit", "|"),
+		ApplicationType:          "web",
+		IdTokenSignedResponseAlg: string(jose.RS256),
 	}
 	if redirectUri != "" {
-		demoSp.Metadata.RedirectUris = append(demoSp.Metadata.RedirectUris, redirectUri)
+		spMetadata.RedirectUris = append(spMetadata.RedirectUris, redirectUri)
 	}
-	err := ormDB.Create(demoSp).Error
+	enc := NewNoOpTextEncrypt()
+	spService := NewSPStoreServiceImpl(ormDB, enc, enc)
+	existingSP, err := spService.FindSPByClientId(context.Background(), "client")
+	if err != nil {
+		spId, err := spService.CreateSP(context.Background(), "Demo Client", "Demo Client", spMetadata)
+		if err != nil {
+			return err
+		}
+		existingSP, err = spService.GetSP(context.Background(), spId)
+		if err != nil {
+			return err
+		}
+	}
+	existingSP.ClientID = "client"
+	existingSP.ClientSecret = "client"
+	existingSP.Public = false
+	err = ormDB.Save(existingSP).Error
 	if err != nil {
 		return err
 	}
@@ -44,7 +52,17 @@ func SetupDemoData(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, re
 	metadata.SetEmail("user@demo.com")
 	metadata.SetEmailVerified(true)
 	ctx := context.Background()
-	uid, err := userService.CreateUser(ctx, "user", "user@demo.com", metadata)
+	var uid uint
+	user, err := userService.FindUserByUsername(ctx, "user")
+	if err != nil {
+		uid, err = userService.CreateUser(ctx, "user", "user@demo.com", metadata)
+		if err != nil {
+			return err
+		}
+	} else {
+		uid = user.ID
+	}
+	err = userService.UpdateUser(ctx, uid, metadata)
 	if err != nil {
 		return err
 	}
@@ -53,6 +71,15 @@ func SetupDemoData(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, re
 		return err
 	}
 	err = userService.ActivateUser(ctx, uid)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Creating default secret key")
+	secretStore := NewSecretStoreServiceImpl(ormDB)
+	_, err = secretStore.GetChannelByAlgoUse(nil, "RS256", "sig")
+	if err != nil {
+		_, err = secretStore.CreateChannel(nil, "default", "RS256", "sig", 30)
+	}
 	return err
 }
 
@@ -102,8 +129,8 @@ func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
 			return fmt.Errorf("error creating table %s:%v", table.TableName(), err)
 		}
 	}
-	ormDB.AddUniqueIndex("idx_channel_name")
-	ormDB.AddUniqueIndex("idx_alg_use")
+	ormDB.Model(channelT).AddUniqueIndex("idx_channel_name")
+	ormDB.Model(channelT).AddUniqueIndex("idx_alg_use")
 	return InitializeDefaultScope(ormDB)
 }
 

@@ -140,7 +140,7 @@ func TestSPStoreServiceImpl_PatchSP(t *testing.T) {
 }
 
 func TestSPStoreServiceImpl_ResetClientCredentials(t *testing.T) {
-	encDec := &TextEncryptDecryptMock{}
+	encDec := NewNoOpTextEncrypt()
 	spService := NewSPStoreServiceImpl(TestDb, encDec, encDec)
 	spService.Db = beginTransaction(context.Background(), spService.Db)
 	ctx := context.Background()
@@ -162,14 +162,4 @@ func TestSPStoreServiceImpl_ResetClientCredentials(t *testing.T) {
 		}
 	})
 	rollbackTransaction(spService.Db)
-}
-
-type TextEncryptDecryptMock struct{}
-
-func (m TextEncryptDecryptMock) DecryptText(_ context.Context, cypherText string) (text string, err error) {
-	return cypherText, nil
-}
-
-func (TextEncryptDecryptMock) EncryptText(_ context.Context, text string) (cypherText string, err error) {
-	return text, nil
 }

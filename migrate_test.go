@@ -13,6 +13,7 @@ func TestMigrateDB(t *testing.T) {
 	_ = os.Remove("migrate.db")
 	db, err := gorm.Open("sqlite3", "migrate.db")
 	if assert.NoError(t, err) {
+		db = db.Debug()
 		err := SetupDBStructure(db, true, true)
 		if assert.NoError(t, err) {
 			config := &Config{
@@ -23,7 +24,9 @@ func TestMigrateDB(t *testing.T) {
 				PasswordCost:           8,
 			}
 			sdkConfig := oidcsdk.NewConfig("http://localhost:8080")
-			err := SetupDemoData(db, config, sdkConfig, "")
+			err = SetupDemoData(db, config, sdkConfig, "")
+			assert.NoError(t, err)
+			err = SetupDemoData(db, config, sdkConfig, "")
 			assert.NoError(t, err)
 		}
 	}

@@ -55,7 +55,7 @@ type (
 	}
 	ISPCommonService interface {
 		CreateSP(ctx context.Context, clientName string, description string, metadata *models.ServiceProviderMetadata) (id uint, err error)
-		UpdateSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error)
+		UpdateSP(ctx context.Context, id uint, public bool, metadata *models.ServiceProviderMetadata) (err error)
 		PatchSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error)
 		DeleteSP(ctx context.Context, id uint) (err error)
 	}
@@ -114,6 +114,8 @@ type (
 		CreateChannel(ctx context.Context, name string, algorithm string, use string, validityDay uint) (uint, error)
 		GetAllChannels(ctx context.Context) ([]*models.SecretChannelModel, error)
 		GetChannel(ctx context.Context, channelId uint) (*models.SecretChannelModel, error)
+		GetChannelByName(ctx context.Context, name string) (*models.SecretChannelModel, error)
+		GetChannelByAlgoUse(ctx context.Context, algo string, use string) (*models.SecretChannelModel, error)
 		DeleteChannel(ctx context.Context, channelId uint) error
 		RenewSecret(ctx context.Context, channelId uint) error
 	}
