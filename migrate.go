@@ -12,8 +12,52 @@ import (
 	"strings"
 )
 
-func MigrateDB(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, force bool, demo bool) error {
-	if force {
+func SetupDemoData(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, redirectUri string) error {
+	fmt.Println("Creating demo client with client_id=client and client_secret=client")
+	demoSp := &models.ServiceProviderModel{
+		Name:         "Demo Client",
+		Description:  "Demo Client",
+		ClientID:     "client",
+		ClientSecret: "client",
+		Active:       true,
+		Public:       false,
+		Metadata: &models.ServiceProviderMetadata{
+			RedirectUris:             []string{sdkConfig.Issuer + "/redirect"},
+			Scopes:                   strings.Split("openid|offline|offline_access", "|"),
+			GrantTypes:               strings.Split("authorization_code|password|refresh_token|client_credentials|implicit", "|"),
+			ApplicationType:          "web",
+			IdTokenSignedResponseAlg: string(jose.RS256),
+		},
+	}
+	if redirectUri != "" {
+		demoSp.Metadata.RedirectUris = append(demoSp.Metadata.RedirectUris, redirectUri)
+	}
+	err := ormDB.Create(demoSp).Error
+	if err != nil {
+		return err
+	}
+	fmt.Println("Creating demo user with username=user and password=user")
+
+	userService := NewUserStoreServiceImpl(ormDB, config)
+	metadata := &models.UserMetadata{}
+	metadata.SetName("Demo User")
+	metadata.SetEmail("user@demo.com")
+	metadata.SetEmailVerified(true)
+	ctx := context.Background()
+	uid, err := userService.CreateUser(ctx, "user", "user@demo.com", metadata)
+	if err != nil {
+		return err
+	}
+	err = userService.SetPassword(ctx, uid, "user")
+	if err != nil {
+		return err
+	}
+	err = userService.ActivateUser(ctx, uid)
+	return err
+}
+
+func SetupDBStructure(ormDB *gorm.DB, drop bool, force bool) error {
+	if drop && !force {
 		fmt.Printf("Do you want to continue (Y/n): ")
 		reader := bufio.NewReader(os.Stdin)
 		char, _, err := reader.ReadRune()
@@ -42,7 +86,7 @@ func MigrateDB(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, force 
 	tables := []dbTable{scopeT, claimT, channelT, secretT, userT, credentialsT, spT, tokensT}
 
 	fmt.Println("dropping all tables")
-	if force {
+	if drop {
 		for _, table := range tables {
 			err := ormDB.DropTableIfExists(table).Error
 			if err != nil {
@@ -60,53 +104,7 @@ func MigrateDB(ormDB *gorm.DB, config *Config, sdkConfig *oidcsdk.Config, force 
 	}
 	ormDB.AddUniqueIndex("idx_channel_name")
 	ormDB.AddUniqueIndex("idx_alg_use")
-	if err := InitializeDefaultScope(ormDB); err != nil {
-		return err
-	}
-
-	if demo {
-		fmt.Println("Creating demo client with client_id=client and client_secret=client")
-		demoSp := &models.ServiceProviderModel{
-			Name:         "Demo Client",
-			Description:  "Demo Client",
-			ClientID:     "client",
-			ClientSecret: "client",
-			Active:       true,
-			Public:       false,
-			Metadata: &models.ServiceProviderMetadata{
-				RedirectUris:             []string{sdkConfig.Issuer + "/redirect"},
-				Scopes:                   strings.Split("openid|offline|offline_access", "|"),
-				GrantTypes:               strings.Split("authorization_code|password|refresh_token|client_credentials|implicit", "|"),
-				ApplicationType:          "web",
-				IdTokenSignedResponseAlg: string(jose.RS256),
-			},
-		}
-		err := ormDB.Create(demoSp).Error
-		if err != nil {
-			return err
-		}
-		fmt.Println("Creating demo user with username=user and password=user")
-
-		userService := NewUserStoreServiceImpl(ormDB, config)
-		metadata := &models.UserMetadata{}
-		metadata.SetName("Demo User")
-		metadata.SetEmail("user@demo.com")
-		metadata.SetEmailVerified(true)
-		ctx := context.Background()
-		uid, err := userService.CreateUser(ctx, "user", "user@demo.com", metadata)
-		if err != nil {
-			return err
-		}
-		err = userService.SetPassword(ctx, uid, "user")
-		if err != nil {
-			return err
-		}
-		err = userService.ActivateUser(ctx, uid)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return InitializeDefaultScope(ormDB)
 }
 
 type dbTable interface {
