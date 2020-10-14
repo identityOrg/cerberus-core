@@ -23,8 +23,8 @@ func NewSecretStoreServiceImpl(db *gorm.DB) *SecretStoreServiceImpl {
 	return &SecretStoreServiceImpl{Db: db}
 }
 
-func (s *SecretStoreServiceImpl) GetAllSecrets(_ context.Context) (*jose.JSONWebKeySet, error) {
-	db := s.Db
+func (s *SecretStoreServiceImpl) GetAllSecrets(ctx context.Context) (*jose.JSONWebKeySet, error) {
+	db := s.Db.WithContext(ctx)
 	secrets := make([]models.SecretModel, 0)
 	db.Find(&secrets)
 	keySet := &jose.JSONWebKeySet{
@@ -46,7 +46,7 @@ func (s *SecretStoreServiceImpl) GetAllSecrets(_ context.Context) (*jose.JSONWeb
 	return keySet, nil
 }
 
-func (s *SecretStoreServiceImpl) CreateChannel(_ context.Context, name string, algorithm string, use string, validityDay uint) (uint, error) {
+func (s *SecretStoreServiceImpl) CreateChannel(ctx context.Context, name string, algorithm string, use string, validityDay uint) (uint, error) {
 	channel := &models.SecretChannelModel{
 		Name:        name,
 		Algorithm:   algorithm,
@@ -68,51 +68,72 @@ func (s *SecretStoreServiceImpl) CreateChannel(_ context.Context, name string, a
 	secret.ExpiresAt = time.Now().Add(validityHour * time.Hour)
 	channel.Secrets = append(channel.Secrets, secret)
 
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	result := db.Save(channel)
 	return channel.ID, result.Error
 }
 
-func (s *SecretStoreServiceImpl) GetAllChannels(_ context.Context) ([]*models.SecretChannelModel, error) {
-	db := s.Db
+func (s *SecretStoreServiceImpl) GetAllChannels(ctx context.Context) ([]*models.SecretChannelModel, error) {
+	db := s.Db.WithContext(ctx)
 	channels := make([]*models.SecretChannelModel, 0)
 	findResult := db.Find(channels)
 	return channels, findResult.Error
 }
 
-func (s *SecretStoreServiceImpl) GetChannel(_ context.Context, channelId uint) (*models.SecretChannelModel, error) {
-	db := s.Db
+func (s *SecretStoreServiceImpl) GetChannel(ctx context.Context, channelId uint) (*models.SecretChannelModel, error) {
+	db := s.Db.WithContext(ctx)
 	channels := &models.SecretChannelModel{}
 	findResult := db.Preload("Secrets").Find(channels, channelId)
-	return channels, findResult.Error
+	if findResult.Error != nil {
+		return nil, findResult.Error
+	}
+	if findResult.RowsAffected < 1 {
+		return nil, fmt.Errorf("channel not found with id %d", channelId)
+	}
+	return channels, nil
 }
 
-func (s *SecretStoreServiceImpl) GetChannelByName(_ context.Context, name string) (*models.SecretChannelModel, error) {
-	db := s.Db
+func (s *SecretStoreServiceImpl) GetChannelByName(ctx context.Context, name string) (*models.SecretChannelModel, error) {
+	db := s.Db.WithContext(ctx)
 	channels := &models.SecretChannelModel{}
 	findResult := db.Preload("Secrets").Find(channels, "name = ?", name)
+	if findResult.Error != nil {
+		return nil, findResult.Error
+	}
+	if findResult.RowsAffected < 1 {
+		return nil, fmt.Errorf("channel not found with name %s", name)
+	}
 	return channels, findResult.Error
 }
 
-func (s *SecretStoreServiceImpl) GetChannelByAlgoUse(_ context.Context, algo string, use string) (*models.SecretChannelModel, error) {
-	db := s.Db
+func (s *SecretStoreServiceImpl) GetChannelByAlgoUse(ctx context.Context, algo string, use string) (*models.SecretChannelModel, error) {
+	db := s.Db.WithContext(ctx)
 	channels := &models.SecretChannelModel{}
 	findResult := db.Preload("Secrets").Find(channels, "algorithm = ? and use = ?", algo, use)
+	if findResult.Error != nil {
+		return nil, findResult.Error
+	}
+	if findResult.RowsAffected < 1 {
+		return nil, fmt.Errorf("channel not found with algo %s and use %s", algo, use)
+	}
 	return channels, findResult.Error
 }
 
-func (s *SecretStoreServiceImpl) DeleteChannel(_ context.Context, channelId uint) error {
-	db := s.Db
+func (s *SecretStoreServiceImpl) DeleteChannel(ctx context.Context, channelId uint) error {
+	db := s.Db.WithContext(ctx)
 	return db.Delete(&models.SecretChannelModel{}, channelId).Error
 }
 
-func (s *SecretStoreServiceImpl) RenewSecret(_ context.Context, channelId uint) error {
-	db := s.Db
+func (s *SecretStoreServiceImpl) RenewSecret(ctx context.Context, channelId uint) error {
+	db := s.Db.WithContext(ctx)
 	channel := &models.SecretChannelModel{}
 	channel.ID = channelId
 	channelResult := db.Preload("Secrets").Find(channel)
 	if channelResult.Error != nil {
 		return channelResult.Error
+	}
+	if channelResult.RowsAffected < 1 {
+		return fmt.Errorf("channel not found with id %d", channelId)
 	}
 	currentTime := time.Now()
 	expiry := time.Duration(channel.ValidityDay) * time.Duration(24) * time.Hour

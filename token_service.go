@@ -18,7 +18,7 @@ func NewTokenStoreServiceImpl(db *gorm.DB) *TokenStoreServiceImpl {
 }
 
 func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId string, signatures oidcsdk.ITokenSignatures, profile oidcsdk.RequestProfile) (err error) {
-	txn := ts.Db
+	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{
 		RequestID:      reqId,
 		ACSignature:    signatures.GetACSignature(),
@@ -38,7 +38,7 @@ func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId st
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := ts.Db
+	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "ac_signature = ?", signature)
 	if result.Error != nil {
@@ -54,14 +54,14 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context,
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := ts.Db
+	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "at_signature = ?", signature)
 	if result.Error != nil {
 		return nil, "", result.Error
 	}
-	if result.Error != nil {
-		return nil, "", result.Error
+	if result.RowsAffected != 1 {
+		return nil, "", fmt.Errorf("access token not found")
 	}
 	if token.ATExpiry.Before(time.Now()) {
 		return nil, "", fmt.Errorf("access token expired")
@@ -70,14 +70,14 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Conte
 }
 
 func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Context, signature string) (oidcsdk.RequestProfile, string, error) {
-	txn := ts.Db
+	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "rt_signature = ?", signature)
 	if result.Error != nil {
 		return nil, "", result.Error
 	}
-	if result.Error != nil {
-		return nil, "", result.Error
+	if result.RowsAffected != 1 {
+		return nil, "", fmt.Errorf("refresh token not found")
 	}
 	if token.RTExpiry.Before(time.Now()) {
 		return nil, "", fmt.Errorf("refresh token expired")
@@ -86,11 +86,14 @@ func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Cont
 }
 
 func (ts *TokenStoreServiceImpl) InvalidateWithRequestID(ctx context.Context, reqID string, what uint8) (err error) {
-	txn := ts.Db
+	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{}
 	result := txn.Find(token, "request_id = ?", reqID)
 	if result.Error != nil {
 		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return fmt.Errorf("token not found with request id %s", reqID)
 	}
 	if token.RequestID != "" {
 		if what&oidcsdk.ExpireRefreshToken > 0 {

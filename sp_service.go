@@ -20,7 +20,7 @@ func (s *SPStoreServiceImpl) GetClient(ctx context.Context, clientID string) (cl
 	return s.FindSPByClientId(ctx, clientID)
 }
 
-func (s *SPStoreServiceImpl) FetchClientProfile(ctx context.Context, clientID string) oidcsdk.RequestProfile {
+func (s *SPStoreServiceImpl) FetchClientProfile(_ context.Context, clientID string) oidcsdk.RequestProfile {
 	profile := oidcsdk.RequestProfile{}
 	profile.SetUsername(clientID)
 	return profile
@@ -34,7 +34,7 @@ func (s *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, de
 		Public:      true,
 		Active:      true,
 	}
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	saveResult := db.Save(user)
 	return user.ID, saveResult.Error
 }
@@ -42,13 +42,13 @@ func (s *SPStoreServiceImpl) CreateSP(ctx context.Context, clientName string, de
 func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, public bool, metadata *models.ServiceProviderMetadata) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	findResult := db.Find(user)
 	if findResult.Error != nil {
 		return findResult.Error
 	}
-	if findResult.Error != nil {
-		return findResult.Error
+	if findResult.RowsAffected != 1 {
+		return fmt.Errorf("client not found with id %d", id)
 	}
 	user.Metadata = metadata
 	user.Public = public
@@ -58,13 +58,13 @@ func (s *SPStoreServiceImpl) UpdateSP(ctx context.Context, id uint, public bool,
 func (s *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *models.ServiceProviderMetadata) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	findResult := db.Find(user)
 	if findResult.Error != nil {
 		return findResult.Error
 	}
-	if findResult.Error != nil {
-		return findResult.Error
+	if findResult.RowsAffected != 1 {
+		return fmt.Errorf("client not found with id %d", id)
 	}
 	jsonData, err := json.Marshal(metadata)
 	if err != nil {
@@ -80,22 +80,22 @@ func (s *SPStoreServiceImpl) PatchSP(ctx context.Context, id uint, metadata *mod
 func (s *SPStoreServiceImpl) DeleteSP(ctx context.Context, id uint) (err error) {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	return db.Delete(user).Error
 }
 
 func (s *SPStoreServiceImpl) ActivateSP(ctx context.Context, id uint) error {
-	return s.updateStatus(id, true)
+	return s.updateStatus(ctx, id, true)
 }
 
 func (s *SPStoreServiceImpl) DeactivateSP(ctx context.Context, id uint) error {
-	return s.updateStatus(id, false)
+	return s.updateStatus(ctx, id, false)
 }
 
-func (s *SPStoreServiceImpl) updateStatus(id uint, active bool) error {
+func (s *SPStoreServiceImpl) updateStatus(ctx context.Context, id uint, active bool) error {
 	user := &models.ServiceProviderModel{}
 	user.ID = id
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	updateResult := db.Model(user).Update("active", active)
 	if updateResult.Error != nil {
 		return updateResult.Error
@@ -119,7 +119,7 @@ func (s *SPStoreServiceImpl) ResetClientCredentials(ctx context.Context, id uint
 	}
 	sp.ClientSecret = encrypted
 	sp.ClientID = uuid.New().String()
-	db := s.Db
+	db := s.Db.WithContext(ctx)
 	result := db.Model(&models.ServiceProviderModel{}).
 		Where("id = ?", id).
 		UpdateColumns(models.ServiceProviderModel{
@@ -163,18 +163,20 @@ func (s *SPStoreServiceImpl) ValidatePrivateKeySignature(ctx context.Context, to
 }
 
 func (s *SPStoreServiceImpl) GetSP(ctx context.Context, id uint) (sp *models.ServiceProviderModel, err error) {
-	tx := s.Db
+	tx := s.Db.WithContext(ctx)
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	err = result.Error
+	if result.RowsAffected != 1 {
+		return nil, fmt.Errorf("no SP found with id %d", id)
+	}
 	return
 }
 
 func (s *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId string) (sp *models.ServiceProviderModel, err error) {
-	tx := s.Db
+	tx := s.Db.WithContext(ctx)
 	sp = &models.ServiceProviderModel{}
 	result := tx.Find(sp, "client_id = ?", clientId)
 	if result.Error != nil {
@@ -183,16 +185,18 @@ func (s *SPStoreServiceImpl) FindSPByClientId(ctx context.Context, clientId stri
 	if result.RowsAffected != 1 {
 		return nil, fmt.Errorf("sp with client_id = %s not found", clientId)
 	}
-	err = result.Error
 	return
 }
 
 func (s *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp *models.ServiceProviderModel, err error) {
-	tx := s.Db
+	tx := s.Db.WithContext(ctx)
 	sp = &models.ServiceProviderModel{}
 	result := tx.First(sp, "name like ?", name)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, fmt.Errorf("no client found with name like %s", name)
 	}
 	err = result.Error
 	return
@@ -200,7 +204,7 @@ func (s *SPStoreServiceImpl) FindSPByName(ctx context.Context, name string) (sp 
 
 func (s *SPStoreServiceImpl) FindAllSP(ctx context.Context, page uint, pageSize uint) (sps []models.ServiceProviderModel, count uint, err error) {
 	var total int64
-	tx := s.Db
+	tx := s.Db.WithContext(ctx)
 	query := tx.Select([]string{"id", "name", "description", "client_id", "active"}).Model(&models.ServiceProviderModel{})
 	err = query.Limit(int(pageSize)).Offset(int(pageSize * page)).Find(&sps).Error
 	if err != nil {
