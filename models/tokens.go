@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -12,14 +13,14 @@ import (
 type (
 	TokensModel struct {
 		BaseModel
-		RequestID      string        `gorm:"column:request_id;not null" json:"request_id,omitempty"`
-		ACSignature    string        `gorm:"column:ac_signature;size:512;index:idx_token_ac" json:"ac_signature,omitempty"`
-		ATSignature    string        `gorm:"column:at_signature;size:512;index:idx_token_at" json:"at_signature,omitempty"`
-		RTSignature    string        `gorm:"column:rt_signature;size:512;index:idx_token_rt" json:"rt_signature,omitempty"`
-		RTExpiry       time.Time     `gorm:"column:rt_expiry" json:"rt_expiry,omitempty"`
-		ATExpiry       time.Time     `gorm:"column:at_expiry" json:"at_expiry,omitempty"`
-		ACExpiry       time.Time     `gorm:"column:ac_expiry" json:"ac_expiry,omitempty"`
-		RequestProfile *SavedProfile `gorm:"column:request_profile" json:"request_profile,omitempty"`
+		RequestID      string         `gorm:"column:request_id;not null" json:"request_id,omitempty"`
+		ACSignature    sql.NullString `gorm:"column:ac_signature;size:512;index:idx_token_ac" json:"ac_signature,omitempty"`
+		ATSignature    sql.NullString `gorm:"column:at_signature;size:512;index:idx_token_at" json:"at_signature,omitempty"`
+		RTSignature    sql.NullString `gorm:"column:rt_signature;size:512;index:idx_token_rt" json:"rt_signature,omitempty"`
+		RTExpiry       sql.NullTime   `gorm:"column:rt_expiry" json:"rt_expiry,omitempty"`
+		ATExpiry       sql.NullTime   `gorm:"column:at_expiry" json:"at_expiry,omitempty"`
+		ACExpiry       sql.NullTime   `gorm:"column:ac_expiry" json:"ac_expiry,omitempty"`
+		RequestProfile *SavedProfile  `gorm:"column:request_profile" json:"request_profile,omitempty"`
 	}
 	SavedProfile struct {
 		Attributes map[string]string

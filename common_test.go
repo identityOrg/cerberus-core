@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -67,6 +68,7 @@ func createTestSP() {
 		},
 	}
 	TestSP.ID = 1
+	TestSP.CreatedAt = time.Now()
 	err := TestDb.Save(TestSP).Error
 	if err != nil {
 		panic(err)
@@ -83,6 +85,7 @@ func createNoCredUser2() {
 		Inactive:     false,
 	}
 	TestNoCredUser2.ID = 3
+	TestNoCredUser2.CreatedAt = time.Now()
 	err := TestDb.Save(TestNoCredUser2).Error
 	if err != nil {
 		panic("noCred user not created:" + err.Error())
@@ -99,6 +102,7 @@ func createNoCredUser() {
 		Inactive:     false,
 	}
 	TestNoCredUser.ID = 2
+	TestNoCredUser.CreatedAt = time.Now()
 	err := TestDb.Save(TestNoCredUser).Error
 	if err != nil {
 		panic("noCred user not created:" + err.Error())
@@ -135,6 +139,7 @@ func createTestUser() {
 		Inactive: false,
 	}
 	TestUser.ID = 1
+	TestUser.CreatedAt = time.Now()
 	err = TestDb.Save(TestUser).Error
 	if err != nil {
 		panic(err)

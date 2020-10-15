@@ -10,7 +10,7 @@ const txKey = "gorm.tx"
 
 func beginTransaction(ctx context.Context, db *gorm.DB) *gorm.DB {
 	opt := &sql.TxOptions{
-		ReadOnly: true,
+		ReadOnly: false,
 	}
 	return db.Begin(opt)
 }

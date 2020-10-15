@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/identityOrg/cerberus-core/models"
 	"github.com/identityOrg/oidcsdk"
@@ -21,12 +22,12 @@ func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId st
 	txn := ts.Db.WithContext(ctx)
 	token := &models.TokensModel{
 		RequestID:      reqId,
-		ACSignature:    signatures.GetACSignature(),
-		ATSignature:    signatures.GetATSignature(),
-		RTSignature:    signatures.GetRTSignature(),
-		RTExpiry:       signatures.GetRTExpiry(),
-		ATExpiry:       signatures.GetATExpiry(),
-		ACExpiry:       signatures.GetACExpiry(),
+		ACSignature:    convertToNullString(signatures.GetACSignature()),
+		ATSignature:    convertToNullString(signatures.GetATSignature()),
+		RTSignature:    convertToNullString(signatures.GetRTSignature()),
+		RTExpiry:       convertToNullTime(signatures.GetRTExpiry()),
+		ATExpiry:       convertToNullTime(signatures.GetATExpiry()),
+		ACExpiry:       convertToNullTime(signatures.GetACExpiry()),
 		RequestProfile: &models.SavedProfile{Attributes: profile},
 	}
 	result := txn.Save(token)
@@ -34,6 +35,22 @@ func (ts *TokenStoreServiceImpl) StoreTokenProfile(ctx context.Context, reqId st
 		return result.Error
 	} else {
 		return nil
+	}
+}
+
+func convertToNullTime(expiry time.Time) sql.NullTime {
+	if expiry.IsZero() {
+		return sql.NullTime{Valid: false}
+	} else {
+		return sql.NullTime{Valid: true, Time: expiry}
+	}
+}
+
+func convertToNullString(signature string) sql.NullString {
+	if signature == "" {
+		return sql.NullString{Valid: false}
+	} else {
+		return sql.NullString{Valid: true, String: signature}
 	}
 }
 
@@ -47,7 +64,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAuthCodeSign(ctx context.Context,
 	if result.RowsAffected != 1 {
 		return nil, "", fmt.Errorf("authorization code not found")
 	}
-	if token.ACExpiry.Before(time.Now()) {
+	if token.ACExpiry.Valid && token.ACExpiry.Time.Before(time.Now()) {
 		return nil, "", fmt.Errorf("authorization code expired")
 	}
 	return token.RequestProfile.Attributes, token.RequestID, nil
@@ -63,7 +80,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithAccessTokenSign(ctx context.Conte
 	if result.RowsAffected != 1 {
 		return nil, "", fmt.Errorf("access token not found")
 	}
-	if token.ATExpiry.Before(time.Now()) {
+	if token.ATExpiry.Valid && token.ATExpiry.Time.Before(time.Now()) {
 		return nil, "", fmt.Errorf("access token expired")
 	}
 	return token.RequestProfile.Attributes, token.RequestID, nil
@@ -79,7 +96,7 @@ func (ts *TokenStoreServiceImpl) GetProfileWithRefreshTokenSign(ctx context.Cont
 	if result.RowsAffected != 1 {
 		return nil, "", fmt.Errorf("refresh token not found")
 	}
-	if token.RTExpiry.Before(time.Now()) {
+	if token.RTExpiry.Valid && token.RTExpiry.Time.Before(time.Now()) {
 		return nil, "", fmt.Errorf("refresh token expired")
 	}
 	return token.RequestProfile.Attributes, token.RequestID, nil
@@ -97,13 +114,13 @@ func (ts *TokenStoreServiceImpl) InvalidateWithRequestID(ctx context.Context, re
 	}
 	if token.RequestID != "" {
 		if what&oidcsdk.ExpireRefreshToken > 0 {
-			token.RTExpiry = time.Now().Add(-10)
+			token.RTExpiry = sql.NullTime{Valid: true, Time: time.Now().Add(-10)}
 		}
 		if what&oidcsdk.ExpireAccessToken > 0 {
-			token.ATExpiry = time.Now().Add(-10)
+			token.ATExpiry = sql.NullTime{Valid: true, Time: time.Now().Add(-10)}
 		}
 		if what&oidcsdk.ExpireAuthorizationCode > 0 {
-			token.ACExpiry = time.Now().Add(-10)
+			token.ACExpiry = sql.NullTime{Valid: true, Time: time.Now().Add(-10)}
 		}
 	}
 	return txn.Save(token).Error
