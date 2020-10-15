@@ -9,7 +9,7 @@ type SecretChannelModel struct {
 	BaseModel
 	Name        string         `gorm:"column:name;index:idx_channel_name,unique" json:"name"`
 	Algorithm   string         `gorm:"column:algorithm;index:idx_alg_use,unique" json:"algorithm"`
-	Use         string         `gorm:"column:use;index:idx_alg_use,unique" json:"use"`
+	Use         string         `gorm:"column:key_usage;index:idx_alg_use,unique" json:"use"`
 	ValidityDay uint           `gorm:"column:validity_day" json:"validity_day"`
 	Secrets     []*SecretModel `gorm:"foreignKey:ChannelId" json:"secrets"`
 }
@@ -30,7 +30,7 @@ type SecretModel struct {
 	Value     []byte    `gorm:"column:value" json:"-"`
 	ChannelId uint      `gorm:"column:channel_id" json:"channel_id"`
 	Algorithm string    `gorm:"column:algorithm" json:"-"`
-	Use       string    `gorm:"column:use" json:"-"`
+	Use       string    `gorm:"column:key_usage" json:"-"`
 }
 
 func (sp SecretModel) AutoMigrate(db gorm.Migrator) error {

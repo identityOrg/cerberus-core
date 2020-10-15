@@ -109,7 +109,7 @@ func (s *SecretStoreServiceImpl) GetChannelByName(ctx context.Context, name stri
 func (s *SecretStoreServiceImpl) GetChannelByAlgoUse(ctx context.Context, algo string, use string) (*models.SecretChannelModel, error) {
 	db := s.Db.WithContext(ctx)
 	channels := &models.SecretChannelModel{}
-	findResult := db.Preload("Secrets").Find(channels, "algorithm = ? and use = ?", algo, use)
+	findResult := db.Preload("Secrets").Find(channels, "algorithm = ? and key_usage = ?", algo, use)
 	if findResult.Error != nil {
 		return nil, findResult.Error
 	}
